@@ -81,4 +81,4 @@ One-time Cloudflare setup is in [docs/BACKEND.md](docs/BACKEND.md).
 
 ## Licence
 
-The code is MIT-licensed (see [LICENSE](LICENSE)). The written content, the case studies and the portrait are © Rakshith Siragaje Ponnappa, all rights reserved.
+© Rakshith Siragaje Ponnappa. All rights reserved. The code, content, case studies, diagrams, design and portrait are published for review as part of a portfolio; see [LICENSE](LICENSE). Ask before reusing any of it: contact@rakshithponnappa.dev.

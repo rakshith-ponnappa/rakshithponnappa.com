@@ -63,6 +63,8 @@ test('the case-study TOC anchor jumps to its section', async ({ page }) => {
 
 test('case-study prev/next links walk the whole series', async ({ page }) => {
   test.skip(studies.length < 2, 'fewer than two case studies');
+  // The walk grows with the series (two passes over every study), so the budget does too.
+  test.setTimeout(30_000 + studies.length * 10_000);
   const pager = page.getByRole('navigation', { name: 'More' });
   const nextLink = () => pager.getByRole('link', { name: /next →/ });
   const prevLink = () => pager.getByRole('link', { name: /← previous/ });

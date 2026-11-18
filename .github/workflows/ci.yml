@@ -5,7 +5,9 @@
 name: CI/CD
 
 on:
+  # Branches are tested through their pull request; pushes to main test and deploy.
   push:
+    branches: [main]
   pull_request:
   workflow_dispatch:
     inputs:
