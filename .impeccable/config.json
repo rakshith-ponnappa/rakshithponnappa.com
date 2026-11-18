@@ -1,0 +1,20 @@
+{
+  "detector": {
+    "ignoreRules": [
+      "tight-leading",
+      "cramped-padding"
+    ],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "low-contrast",
+        "value": "*",
+        "files": [
+          "**/resume/index.html"
+        ],
+        "createdAt": "2026-11-18T17:40:16.898Z",
+        "reason": "Print stylesheet (dark ink for paper) is evaluated against the screen theme; on screen the résumé is light-on-dark"
+      }
+    ]
+  }
+}

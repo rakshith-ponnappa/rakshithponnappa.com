@@ -107,7 +107,6 @@ const path = Astro.url.pathname;
   }
   .mark-core {
     fill: var(--signal);
-    filter: drop-shadow(0 0 6px color-mix(in oklch, var(--signal) 70%, transparent));
   }
   .brand:hover .mark-core {
     fill: var(--amber);
@@ -228,7 +227,7 @@ const path = Astro.url.pathname;
   }
   .mobile-nav a[aria-current='page'] {
     background: var(--bg-sunken);
-    box-shadow: inset 2px 0 0 var(--signal);
+    font-weight: 600;
   }
   @media (max-width: 900px) {
     .nav {

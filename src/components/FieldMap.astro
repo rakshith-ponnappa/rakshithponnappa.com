@@ -125,15 +125,14 @@ const coords = (lat: number, lon: number) => `${lat.toFixed(2)}°N ${lon.toFixed
     stroke: color-mix(in oklch, var(--fg) 28%, transparent);
   }
   .sea-lbl {
-    font-family: var(--font-serif);
-    font-style: italic;
-    font-size: 16px;
+    font-size: 14px;
+    letter-spacing: 0.04em;
     fill: var(--fg-faint);
     letter-spacing: 0.02em;
   }
   .axis {
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: 12px;
     fill: var(--fg-faint);
   }
   .arc {
@@ -193,7 +192,7 @@ const coords = (lat: number, lon: number) => `${lat.toFixed(2)}°N ${lon.toFixed
   }
   .co {
     font-family: var(--font-mono);
-    font-size: 10.5px;
+    font-size: 12px;
     fill: var(--fg-faint);
   }
   .deps {

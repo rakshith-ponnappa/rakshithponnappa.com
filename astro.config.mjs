@@ -62,18 +62,6 @@ export default defineConfig({
         ],
       },
     },
-    {
-      provider: fontProviders.local(),
-      name: 'Instrument Serif',
-      cssVariable: '--font-instrument',
-      fallbacks: ['ui-serif', 'Georgia', 'serif'],
-      options: {
-        variants: [
-          { src: [fs('@fontsource/instrument-serif', 'instrument-serif-latin-400-normal.woff2')], weight: '400', style: 'normal' },
-          { src: [fs('@fontsource/instrument-serif', 'instrument-serif-latin-400-italic.woff2')], weight: '400', style: 'italic' },
-        ],
-      },
-    },
   ],
   security: {
     csp: {

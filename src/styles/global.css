@@ -93,7 +93,6 @@
   --color-red: var(--red);
   --font-sans: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
-  --font-serif: var(--font-instrument), ui-serif, Georgia, serif;
 }
 
 /* ---------------------------------------------------------------------------
@@ -233,10 +232,10 @@
     color: var(--fg-faint);
   }
 
+  /* Second clause of a heading: same face, quieter colour. */
   .serif {
-    font-family: var(--font-serif);
-    font-weight: 400;
-    letter-spacing: -0.01em;
+    font-style: normal;
+    color: var(--fg-muted);
   }
 
   .mono {
@@ -307,7 +306,6 @@
     background: var(--signal);
     border-color: transparent;
     color: var(--on-signal);
-    box-shadow: 0 10px 30px -12px color-mix(in oklch, var(--signal) 60%, transparent);
   }
   .btn-primary:hover {
     background: color-mix(in oklch, var(--signal) 88%, var(--fg));
@@ -326,7 +324,7 @@
     align-items: center;
     gap: 0.35rem;
     font-family: var(--font-mono);
-    font-size: 0.72rem;
+    font-size: 0.75rem;
     line-height: 1;
     padding: 0.38rem 0.55rem;
     border-radius: 6px;
@@ -363,30 +361,6 @@
   .glow {
     isolation: isolate;
   }
-  .glow::before {
-    content: '';
-    position: absolute;
-    inset: -1px;
-    z-index: -1;
-    border-radius: inherit;
-    padding: 1px;
-    background: radial-gradient(
-      420px circle at var(--mx, 50%) var(--my, 0%),
-      color-mix(in oklch, var(--signal) 55%, transparent),
-      transparent 45%
-    );
-    -webkit-mask:
-      linear-gradient(#000 0 0) content-box,
-      linear-gradient(#000 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
-    opacity: 0;
-    transition: opacity var(--t-3) var(--ease-out);
-    pointer-events: none;
-  }
-  .glow:hover::before {
-    opacity: 1;
-  }
 
   .section {
     padding-block: clamp(3rem, 6vw, 5rem);
@@ -420,10 +394,7 @@
     font-size: var(--step-3);
   }
   .section-title em {
-    font-family: var(--font-serif);
-    font-style: italic;
-    font-weight: 400;
-    letter-spacing: -0.01em;
+    font-style: normal;
     color: var(--fg-muted);
   }
   .lede {
@@ -443,14 +414,6 @@
   }
   .link:hover {
     text-decoration-color: var(--signal);
-  }
-
-  .grid-bg {
-    background-image:
-      linear-gradient(var(--grid) 1px, transparent 1px),
-      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
-    background-size: 56px 56px;
-    background-position: center top;
   }
 
   /* Long-form case-study typography */
@@ -536,12 +499,11 @@
     margin-top: 0.5em;
   }
   .prose blockquote {
-    border-left: 2px solid var(--signal);
+    border-left: 1px solid var(--line);
     padding-left: 1.1em;
-    font-family: var(--font-serif);
-    font-size: 1.35em;
-    line-height: 1.4;
-    color: var(--fg);
+    font-size: 1.1em;
+    line-height: 1.55;
+    color: var(--fg-muted);
   }
   .prose :not(pre) > code {
     font-size: 0.86em;
@@ -575,7 +537,7 @@
   }
   .prose th {
     font-family: var(--font-mono);
-    font-size: 0.72rem;
+    font-size: 0.75rem;
     letter-spacing: 0.06em;
     text-transform: uppercase;
     font-weight: 500;
