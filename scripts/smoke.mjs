@@ -25,6 +25,18 @@ async function get(path, init = {}) {
   const url = path.startsWith('http') ? path : BASE + path;
   return fetch(bust(url), { redirect: 'manual', ...init, headers: { 'User-Agent': UA, ...(init.headers ?? {}) }, signal: AbortSignal.timeout(20_000) });
 }
+// For hosts that may still be provisioning (a newly attached domain's certificate takes a minute or two):
+// retry network errors, but return HTTP responses as-is so real failures still fail.
+async function getWithRetry(url, attempts = 12, delayMs = 10_000) {
+  for (let i = 1; ; i++) {
+    try {
+      return await get(url);
+    } catch (err) {
+      if (i >= attempts) throw err;
+      await sleep(delayMs);
+    }
+  }
+}
 const post = (path, body, origin = BASE) =>
   get(path, { method: 'POST', body: JSON.stringify(body), headers: { 'Content-Type': 'application/json', Origin: origin } });
 
@@ -117,7 +129,7 @@ if (PROD) {
   await check('alias domains redirect to the canonical site', async () => {
     const aliases = ['www.rakshithponnappa.dev', 'rakshithponnappa.com', 'www.rakshithponnappa.com'];
     for (const host of aliases) {
-      const r = await get(`https://${host}/work/?from=smoke`);
+      const r = await getWithRetry(`https://${host}/work/?from=smoke`);
       expect(r.status === 301, `${host} → ${r.status}`);
       expect((r.headers.get('location') ?? '').startsWith('https://rakshithponnappa.dev/work/?from=smoke'), `${host} → ${r.headers.get('location')}`);
     }
