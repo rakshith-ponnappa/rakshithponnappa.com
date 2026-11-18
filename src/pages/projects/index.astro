@@ -1,0 +1,62 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import ProjectGrid from '../../components/ProjectGrid.astro';
+import ContactCTA from '../../components/ContactCTA.astro';
+import Icon from '../../components/Icon.astro';
+import { profile } from '../../data/profile';
+
+const projects = (await getCollection('projects')).sort((a, b) => a.data.order - b.data.order);
+---
+
+<BaseLayout
+  title="Projects"
+  description="Open-source AI systems, platform templates and tools: multi-agent screening, agentic trading, local RAG with evals, sandbox conformance, landing-zone Terraform and GitLab upgrade playbooks."
+>
+  <section class="container-x page-head">
+    <p class="eyebrow">Projects · {projects.length} public repositories</p>
+    <h1>Built in the open, <em class="serif">written up honestly.</em></h1>
+    <p class="lede">
+      Every project has a README you can trust and a written list of what it doesn’t do yet. Most ship with tests and CI. Pick one for the
+      engineering deep-dive.
+    </p>
+    <a class="btn" href={profile.github} rel="noopener"><Icon name="github" /> github.com/rakshith-ponnappa <Icon name="arrow-up-right" size={14} /></a>
+  </section>
+  <section class="container-x" aria-labelledby="list-title">
+    <h2 id="list-title" class="visually-hidden">All projects</h2>
+    <ProjectGrid items={projects} />
+  </section>
+  <ContactCTA />
+</BaseLayout>
+
+<style>
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .page-head {
+    padding-block: clamp(3rem, 7vw, 6rem) clamp(2rem, 4vw, 3rem);
+  }
+  h1 {
+    margin-top: 1rem;
+    font-size: var(--step-5);
+    letter-spacing: -0.05em;
+    line-height: 0.95;
+    max-width: 16ch;
+  }
+  h1 em {
+    font-style: italic;
+    color: var(--fg-muted);
+    letter-spacing: -0.02em;
+  }
+  .lede {
+    margin-top: 1.5rem;
+  }
+  .btn {
+    margin-top: 2rem;
+  }
+</style>

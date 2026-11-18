@@ -1,0 +1,25 @@
+flowchart TD
+  subgraph IN["Migration scope"]
+    A["20 client<br/>estates"]
+    B["30,000<br/>websites"]
+  end
+  C["Capacity<br/>planning"]
+  D["Cost<br/>model"]
+  F["Repeatable<br/>client onboarding"]
+  E["Amazon EKS<br/>platform prototype"]
+  G["Migration<br/>plan"]
+  subgraph OBS["Observability"]
+    H["SignalFx<br/>real-time metrics"]
+    I["Custom<br/>dashboards"]
+    J["Proactive<br/>alerting"]
+  end
+  A --> F
+  B --> C
+  C --> D
+  C --> E
+  D --> E
+  F --> E
+  E --> G
+  E --> H
+  H --> I
+  H --> J

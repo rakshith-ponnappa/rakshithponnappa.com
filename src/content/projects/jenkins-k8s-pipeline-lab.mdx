@@ -1,0 +1,75 @@
+---
+title: "jenkins-k8s-pipeline-lab"
+repo: "https://github.com/rakshith-ponnappa/jenkins-k8s-pipeline-lab"
+tagline: "My 2019 hands-on lab for running Jenkins agents as ephemeral Kubernetes pods, kept as an archive of an early Kubernetes CI lab, with a 2026 retrospective."
+category: "platform"
+year: 2019
+status: "archived"
+stack: ["Jenkins", "Jenkins Kubernetes plugin", "Scripted Groovy pipelines", "Kubernetes", "Docker", "Selenium Grid 3", "Maven", "Hugo", "html-proofer", "nginx"]
+highlights:
+  - "Builds run in throwaway pod containers, never on the Jenkins controller."
+  - "A Selenium hub and Chrome and Firefox nodes as sidecars in one pod, with Maven tests in parallel against both browsers."
+  - "End-to-end Hugo CI/CD: build, link-check, image build and push, rolling update with kubectl."
+  - "An honest 2026 retrospective on what I would replace today."
+metrics:
+  - { value: "3", label: "pipeline patterns" }
+  - { value: "~12", label: "experiment repos merged into one" }
+  - { value: "5", label: "containers in the Selenium pod" }
+  - { value: "2019", label: "original build year" }
+diagram: "/diagrams/jenkins-k8s-pipeline-lab.svg"
+diagramAlt: "A git push triggers the Jenkins controller, which uses the Kubernetes plugin to create an ephemeral agent pod. Inside the pod, a Hugo container builds the site, html-proofer validates links, a Docker container builds and pushes the image to Docker Hub, and a kubectl container runs set image on the hugo-app Deployment, which pulls the new image in a rolling update. Kubeconfig and Docker credentials are mounted from Kubernetes secrets."
+order: 10
+---
+
+## The problem
+
+In 2019 the usual Jenkins setup was a long-lived controller with a few static build agents, each slowly accumulating toolchains, caches and state. Builds interfered with each other and agents were snowflakes. The Jenkins Kubernetes plugin offered a different model: ask the cluster for a pod made of purpose-built containers, run the stages inside them, and throw the pod away afterwards.
+
+I built this lab to learn that model properly. It is an archive. I merged about a dozen small experiment repositories into one, kept the pipelines as I wrote them, removed personal identifiers, and filled in one Hugo build step that had been left empty.
+
+## How it works
+
+Three folders, each a step up in complexity.
+
+**`01-golang-utility-pod`** is the minimal pattern: `podTemplate` declares a single `golang` container, `node(label)` schedules the pod, and `container('golang')` runs the step inside the toolchain container rather than on the controller.
+
+**`02-selenium-parallel-browsers`** puts five containers in one pod: two Maven containers, a Selenium Grid hub, and Chrome and Firefox nodes as sidecars. Because containers in a pod share a network namespace, the browser nodes are pointed at `localhost:4444` for the hub and moved to ports 5556 and 5557 to avoid clashing. A `parallel` block then runs the Maven test suite against Firefox and Chrome at the same time. It is based on the Kubernetes plugin's public Selenium example.
+
+**`03-hugo-site-cicd`** is a full delivery pipeline in a four-container pod:
+
+1. `hugo` builds the static site.
+2. `html-proofer` validates links, failing on 4xx responses.
+3. `docker` builds an nginx-based image and pushes it tagged with the build number and `latest`.
+4. `kubectl` runs `kubectl set image` against the `hugo-app` Deployment for a rolling update.
+
+Kubeconfig and Docker registry credentials are mounted into the containers from Kubernetes secrets rather than stored in Jenkins.
+
+## Engineering decisions
+
+**One tool per container.** Each stage runs in an image that does one thing. Toolchain upgrades become an image tag change, and nothing leaks between builds because the pod is discarded.
+
+**Sidecars over a shared grid.** Running the Selenium hub and browsers inside the build pod gave every build its own isolated grid. The trade-off is a heavier pod and port juggling on a shared localhost.
+
+**Immutable build tags plus a moving tag.** Deploying by build number made each rollout traceable to one Jenkins run, while `latest` was kept for convenience.
+
+**Credentials from the cluster.** Mounting secrets as volumes kept registry and cluster credentials out of the Jenkins credential store and out of the Jenkinsfile.
+
+## Results & evidence
+
+- Three working pipeline patterns, from a single utility container to a full build, test and deploy loop on Kubernetes.
+- The Hugo pipeline's prerequisites are documented: two secrets, an existing Deployment and one job variable.
+- Third-party content keeps its own licence (the Hugo theme is MIT), and my pipeline code is MIT.
+
+There are no tests or metrics here; this is a learning lab, and I present it as one.
+
+## Limitations & next steps
+
+This is a 2019 archive and I am not maintaining it. Looking back from 2026, I would change most of it:
+
+- **Scripted `podTemplate`** would become declarative pipelines with a `kubernetes { yaml ... }` agent.
+- **Mounting the host Docker socket** gives a build container root-equivalent access to the node. I would use rootless Kaniko or BuildKit builds instead.
+- **`kubectl set image` from CI** would become GitOps with Argo CD or Flux, so the cluster pulls desired state rather than CI pushing it.
+- **Floating image tags** (`golang`, `docker`, `latest`) would be pinned to versions and digests, with Trivy scanning and SBOMs added.
+- **Deprecated syntax.** The first pipeline uses the old `stage 'name'` form, and the Selenium images are from the 3.x era.
+
+It stays public because it is where my platform engineering started, and the gap between it and my current work is part of the story.

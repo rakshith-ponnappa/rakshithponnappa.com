@@ -1,0 +1,74 @@
+---
+title: "Azure landing zone audit, remediation & AKS modernisation"
+client: "Five Below"
+industry: "Retail"
+employer: "Ensono"
+period: "2022 – present"
+role: "Principal Consultant, DevOps (audit lead)"
+summary: "I audited a retailer's Azure landing zone across Terraform, Well-Architected and CIS controls and runtime posture, then turned the findings into a versioned remediation roadmap that cut critical findings by 75% and identified $47K a year in savings."
+clouds: ["Azure"]
+stack: ["Terraform", "Azure Well-Architected Framework", "CIS Benchmarks", "AKS", "NGINX ingress", "AKS app routing add-on", "GitHub Actions"]
+metrics:
+  - { value: "$47K", label: "annual cloud savings identified" }
+  - { value: "75%", label: "reduction in critical findings" }
+  - { value: "8.0 / 6.6", label: "WAF score, static vs runtime" }
+  - { value: "v1–v5", label: "audit report iterations" }
+diagram: "/diagrams/five-below-azure-landing-zone-audit.svg"
+diagramAlt: "Audit flow: Terraform code and the live Azure estate feed a static WAF review, a runtime assessment, CIS validation and a cost review; findings roll into a versioned report and a remediation roadmap, with AKS ingress retirement scoped as its own workstream."
+repo: "https://github.com/rakshith-ponnappa/stacks-ignite-fbe-lzvending-template-aks"
+order: 6
+featured: true
+---
+
+## Context
+
+Five Below runs its workloads on an Azure landing zone defined in Terraform. Like most landing zones a few years in, the code described one platform and the subscriptions held a slightly different one. The ask was an independent audit: how close is the estate to Microsoft's Well-Architected Framework (WAF) and the CIS benchmarks, where is money being wasted, and what should be fixed first.
+
+A second thread arrived during the engagement. The AKS clusters exposed workloads through NGINX-based ingress, and that ingress path was being retired on AKS in favour of the managed application routing add-on, with a November 2026 cutoff. The client needed that change scoped and priced before it became an outage.
+
+## Constraints
+
+- **Production estate.** The audit had to be read-only. Nothing could change in the subscriptions while it ran.
+- **Two sources of truth.** Terraform shows intent; the portal shows reality. A review of either alone would mislead.
+- **A findings list nobody can act on is worthless.** The output had to be ordered by risk and effort so the platform team could plan sprints against it.
+- **A fixed external date** for the ingress retirement, independent of the audit timeline.
+
+## What I did
+
+1. **Static review of the Terraform IaC.** I analysed the landing-zone Terraform and scored the design it describes against the WAF pillars. The design scored **8.0**.
+2. **Runtime assessment of the live estate.** I scored the same pillars against what was actually deployed. The runtime score was **6.6**. The gap between the two numbers turned out to be the most useful finding of the audit.
+3. **CIS benchmark validation** of the deployed resources, so security findings mapped to a recognised control rather than to my opinion.
+4. **Cost review.** I looked for right-sizing candidates, storage that belonged on a cheaper tier, and data with no lifecycle policy. Together these came to **$47K in annual savings**.
+5. **A versioned report.** The audit went through five versions (v1 to v5). Keeping finding IDs stable across versions is what lets a report double as a progress tracker.
+6. **Remediation roadmap.** I grouped findings into ordered waves with owners. Working through it cut **critical findings by 75%**.
+7. **AKS ingress retirement.** I scoped and priced the move from NGINX ingress to the AKS application routing add-on ahead of the November 2026 cutoff.
+
+## Key decisions
+
+| Decision | Why | Trade-off |
+|---|---|---|
+| Score static and runtime separately | A single blended score hides drift. Two numbers (8.0 vs 6.6) show that the design is sound and the operation has slipped. | Twice the scoring work, and a lower headline number in front of the client. |
+| Anchor security findings to CIS | A named control is easier to accept, prioritise and re-test than a reviewer's judgement. | Some real but non-benchmarked risks needed extra justification. |
+| Version the report instead of re-issuing it | Stable finding IDs across v1 to v5 turned the report into a tracking tool and gave the client an audit trail. | More document discipline from me on every revision. |
+| Separate the ingress retirement from general remediation | It had a hard date and its own cost. Mixing it into the backlog would have hidden the deadline. | Two workstreams to report on instead of one. |
+
+### Why the static/runtime gap matters
+
+When code scores higher than runtime, the usual causes are portal changes that never made it back to Terraform, resources created outside the pipeline, and policies assigned in audit mode that nobody reviews. Fixing those is mostly process: route changes through the pipeline and turn the right policies to deny. That is cheaper than redesigning the landing zone, which the 8.0 static score said it did not need.
+
+### Pricing the ingress change
+
+The AKS workload template already pointed the way: the public, sanitised copy I keep of the AKS vending template removes the old Helm-based NGINX release from state with a Terraform `removed` block and relies on the App Routing add-on instead. Scoping the change meant inventorying every ingress, its annotations and TLS handling, then estimating the per-cluster effort to move it.
+
+## Outcome
+
+- Critical findings down **75%** through the remediation roadmap.
+- **$47K** a year in savings identified through right-sizing, storage tiering and lifecycle management.
+- A baseline of **8.0 static / 6.6 runtime** WAF scores the client can re-measure against.
+- The ingress retirement scoped and priced before the cutoff, as its own costed piece of work.
+
+## What I'd do next
+
+- **Make the audit continuous.** Most checks here can run on a schedule: policy compliance exports, drift detection with `terraform plan` against each subscription, and a cost report. Re-scoring every quarter is better than a one-off audit.
+- **Close the drift loop.** Move audit-mode policies that matter to deny once the backlog is clear, so the runtime score cannot fall behind the design again.
+- **Track the gap, not just the score.** The static-to-runtime difference is the metric I would put on the platform team's dashboard.

@@ -1,0 +1,242 @@
+---
+import { fieldDeployments } from '../data/profile';
+
+// Equirectangular projection of a lon 44–86 / lat 5–31 window onto a 700×440 viewBox.
+const W = 700;
+const H = 440;
+const LON0 = 44, LON1 = 86, LAT0 = 5, LAT1 = 31;
+const P = (lat: number, lon: number) => [((lon - LON0) / (LON1 - LON0)) * W, ((LAT1 - lat) / (LAT1 - LAT0)) * H] as const;
+// Hand-traced, deliberately coarse coastlines (lat, lon): Arabian Peninsula, and Iran → Pakistan → India, plus Sri Lanka.
+const arabia: [number, number][] = [
+  [31, 44], [31, 47.6], [29.4, 48], [28.3, 48.6], [27, 49.7], [26.2, 50.2], [25.6, 50.6], [24.6, 51.3], [25.9, 51.6], [26.1, 51.3], [24.9, 50.8],
+  [24.1, 51.8], [24.1, 52.6], [24.4, 54.4], [25.3, 55.3], [25.8, 56], [26.4, 56.3], [25, 56.4], [24.4, 56.7], [23.6, 58.6], [22.5, 59.8],
+  [20.7, 58.8], [19, 57.7], [17, 55], [16, 52.2], [14.5, 49], [12.8, 45], [12.6, 44],
+];
+const asia: [number, number][] = [
+  [31, 48.4], [30, 48.5], [29, 50.8], [27.2, 52.6], [26.6, 54.5], [27.1, 56.3], [25.6, 57.8], [25.3, 61.6], [25.2, 64.5], [24.8, 66.9],
+  [23.6, 68.4], [22.8, 68.9], [21.6, 69.6], [20.9, 70.8], [21.7, 72.6], [20.2, 72.8], [18.9, 72.8], [15.5, 73.8], [12.9, 74.8], [10, 76.2],
+  [8.1, 77.5], [9.3, 79.1], [10.3, 79.8], [13.1, 80.3], [15.9, 81.2], [17.7, 83.3], [19.3, 84.9], [20.2, 86], [31, 86],
+];
+const lanka: [number, number][] = [[9.8, 80], [8.5, 81.3], [6.9, 81.9], [6, 80.6], [7, 79.8]];
+const poly = (pts: [number, number][]) => 'M' + pts.map(([la, lo]) => P(la, lo).map((v) => v.toFixed(1)).join(' ')).join('L') + 'Z';
+const land = [arabia, asia, lanka].map(poly).join(' ');
+const pins = [
+  { id: 'Dubai', lat: 25.2, lon: 55.27, tone: 'signal', label: 'Dubai · 3y', dx: -14, dy: -10, anchor: 'end' },
+  { id: 'Muscat', lat: 23.59, lon: 58.41, tone: 'signal', label: 'Muscat · 1y', dx: 14, dy: 22, anchor: 'start' },
+  { id: 'Bengaluru', lat: 12.97, lon: 77.59, tone: 'azure', label: 'Bengaluru · home', dx: -14, dy: 22, anchor: 'end' },
+].map((p) => ({ ...p, xy: P(p.lat, p.lon) }));
+const home = pins.find((p) => p.id === 'Bengaluru')!.xy;
+const arc = (to: readonly [number, number]) => {
+  const [x1, y1] = home;
+  const [x2, y2] = to;
+  const mx = (x1 + x2) / 2;
+  const my = (y1 + y2) / 2 - Math.hypot(x2 - x1, y2 - y1) * 0.28;
+  return `M${x1.toFixed(1)} ${y1.toFixed(1)} Q${mx.toFixed(1)} ${my.toFixed(1)} ${x2.toFixed(1)} ${y2.toFixed(1)}`;
+};
+const coords = (lat: number, lon: number) => `${lat.toFixed(2)}°N ${lon.toFixed(2)}°E`;
+---
+
+<div class="field">
+  <figure class="map card" aria-label="Map of field deployments: Dubai and Muscat, with Bengaluru as home base">
+    <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-labelledby="map-title">
+      <title id="map-title">Field deployments across the Gulf and India</title>
+      <defs>
+        <pattern id="dots" width="14" height="14" patternUnits="userSpaceOnUse">
+          <circle cx="1.6" cy="1.6" r="1.6" class="dotfill"></circle>
+        </pattern>
+        <radialGradient id="fade" cx="50%" cy="50%" r="65%">
+          <stop offset="0.55" stop-color="#fff" stop-opacity="1"></stop>
+          <stop offset="1" stop-color="#fff" stop-opacity="0"></stop>
+        </radialGradient>
+        <mask id="m"><rect width={W} height={H} fill="url(#fade)"></rect></mask>
+        <clipPath id="land"><path d={land}></path></clipPath>
+      </defs>
+      <g mask="url(#m)">
+        <rect width={W} height={H} fill="url(#dots)" clip-path="url(#land)"></rect>
+        <path d={land} class="coast"></path>
+      </g>
+      <text x="16" y={H - 16} class="axis">{LON0}°E</text>
+      <text x={W - 16} y={H - 16} class="axis" text-anchor="end">{LON1}°E</text>
+      <text x={W - 16} y="24" class="axis" text-anchor="end">{LAT1}°N</text>
+      <text x={P(17, 63)[0]} y={P(17, 63)[1]} class="sea-lbl">Arabian Sea</text>
+      {pins.filter((p) => p.id !== 'Bengaluru').map((p) => <path d={arc(p.xy)} class:list={['arc', p.tone]} pathLength="1"></path>)}
+      {
+        pins.map((p) => (
+          <g class:list={['pin', p.tone]} transform={`translate(${p.xy[0].toFixed(1)} ${p.xy[1].toFixed(1)})`}>
+            <circle r="16" class="halo" />
+            <circle r="5" class="core" />
+            <text x={p.dx} y={p.dy} text-anchor={p.anchor} class="lbl">
+              {p.label}
+            </text>
+            <text x={p.dx} y={p.dy + 15} text-anchor={p.anchor} class="co">
+              {coords(p.lat, p.lon)}
+            </text>
+          </g>
+        ))
+      }
+    </svg>
+  </figure>
+
+  <ul class="deps">
+    {
+      fieldDeployments.map((d) => (
+        <li class="reveal">
+          <p class="mono where">
+            <span class="dot" data-tone={d.city === 'Bengaluru' ? 'azure' : undefined} /> {d.city}, {d.country}
+          </p>
+          <p class="yrs">{d.years}</p>
+          <p class="cl">{d.clients}</p>
+        </li>
+      ))
+    }
+  </ul>
+</div>
+
+<style>
+  .field {
+    display: grid;
+    grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+    gap: 1.25rem;
+    align-items: stretch;
+  }
+  .map {
+    margin: 0;
+    padding: 0.5rem;
+    overflow: hidden;
+    display: grid;
+    align-content: center;
+  }
+  svg {
+    width: 100%;
+    height: auto;
+  }
+  .dotfill {
+    fill: color-mix(in oklch, var(--fg) 30%, transparent);
+  }
+  .coast {
+    fill: none;
+    stroke: color-mix(in oklch, var(--fg) 14%, transparent);
+    stroke-width: 1;
+  }
+  :global(:root[data-theme='light']) .dotfill {
+    fill: color-mix(in oklch, var(--fg) 45%, transparent);
+  }
+  :global(:root[data-theme='light']) .coast {
+    stroke: color-mix(in oklch, var(--fg) 28%, transparent);
+  }
+  .sea-lbl {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: 16px;
+    fill: var(--fg-faint);
+    letter-spacing: 0.02em;
+  }
+  .axis {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    fill: var(--fg-faint);
+  }
+  .arc {
+    fill: none;
+    stroke-width: 1.5;
+    stroke-dasharray: 0.012 0.012;
+    vector-effect: non-scaling-stroke;
+  }
+  .arc.signal {
+    stroke: var(--signal);
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .arc {
+      animation: dash 3s linear infinite;
+    }
+    .pin .halo {
+      animation: halo 2.8s var(--ease-out) infinite;
+      transform-box: fill-box;
+      transform-origin: center;
+    }
+  }
+  @keyframes dash {
+    to {
+      stroke-dashoffset: -0.24;
+    }
+  }
+  @keyframes halo {
+    0% {
+      transform: scale(0.4);
+      opacity: 0.6;
+    }
+    100% {
+      transform: scale(1.4);
+      opacity: 0;
+    }
+  }
+  .pin .core {
+    stroke: var(--bg-raised);
+    stroke-width: 2;
+  }
+  .pin.signal .core,
+  .pin.signal .halo {
+    fill: var(--signal);
+  }
+  .pin.azure .core,
+  .pin.azure .halo {
+    fill: var(--azure);
+  }
+  .pin .halo {
+    opacity: 0.25;
+  }
+  .lbl {
+    font-family: var(--font-sans);
+    font-size: 15px;
+    font-weight: 600;
+    fill: var(--fg);
+  }
+  .co {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    fill: var(--fg-faint);
+  }
+  .deps {
+    display: grid;
+    grid-auto-rows: 1fr;
+    gap: 0.75rem;
+  }
+  .deps li {
+    display: grid;
+    align-content: center;
+    padding: 1.1rem 1.2rem;
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius);
+    background: var(--bg-raised);
+  }
+  .where {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    font-size: 0.8rem;
+    color: var(--fg);
+  }
+  .yrs {
+    margin-top: 0.4rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .cl {
+    margin-top: 0.15rem;
+    font-size: 0.9rem;
+    color: var(--fg-muted);
+  }
+  @media (max-width: 900px) {
+    .field {
+      grid-template-columns: 1fr;
+    }
+    .deps {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+  @media (max-width: 520px) {
+    .deps {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

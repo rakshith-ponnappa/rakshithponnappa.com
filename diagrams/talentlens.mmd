@@ -1,0 +1,13 @@
+flowchart LR
+    JD["Job description<br/>PDF / DOCX / text"] --> JDA["JD analyser<br/>LLM or heuristics"]
+    RES["Resumes<br/>PDF / DOCX"] --> RP["Resume parser<br/>LLM or heuristics"]
+    RP --> VER["Verifier<br/>companies, certs, LinkedIn,<br/>email MX, timeline"]
+    JDA --> SC["Scoring engine<br/>6 weighted dimensions<br/>TF-IDF + SBERT + Jaccard"]
+    RP --> SC
+    VER --> SC
+    SC --> R1["Round 1<br/>11 persona agents<br/>score independently"]
+    R1 --> R2["Round 2<br/>cross-agent deliberation<br/>bounded adjustments"]
+    R2 --> CON["Round 3<br/>weighted consensus<br/>grade + recommendation"]
+    CON --> RANK["Rankings<br/>and skill gaps"]
+    CON --> IG["Interview generator<br/>DOCX / JSON"]
+    RANK --> DB["SQLite history<br/>CLI + Streamlit UI"]

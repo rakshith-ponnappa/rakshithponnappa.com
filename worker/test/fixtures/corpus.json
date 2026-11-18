@@ -1,0 +1,61 @@
+{
+  "version": "test-2026-11-18",
+  "docs": [
+    {
+      "id": "talentlens-0",
+      "title": "TalentLens",
+      "url": "/projects/talentlens/",
+      "section": "Overview",
+      "text": "TalentLens is a multi-agent resume screening system. It parses resumes and job descriptions, verifies companies and certifications, and scores candidates with eleven persona agents that deliberate before a weighted consensus. Source: https://github.com/rakshith-ponnappa/talentlens"
+    },
+    {
+      "id": "aks-0",
+      "title": "AKS landing zone template",
+      "url": "/projects/stacks-ignite-fbe-lzvending-template-aks/",
+      "section": "Architecture",
+      "text": "He built a Terraform landing zone vending template for Azure Kubernetes Service (AKS) with private clusters, workload identity, Azure Policy and GitOps bootstrapping through Flux."
+    },
+    {
+      "id": "jenkins-0",
+      "title": "Jenkins Kubernetes pipeline lab",
+      "url": "/projects/jenkins-k8s-pipeline-lab/",
+      "section": "Overview",
+      "text": "A hands-on lab running Jenkins agents as Kubernetes pods, with declarative pipelines, ephemeral build agents and Helm based deployment to a kind cluster."
+    },
+    {
+      "id": "gitlab-0",
+      "title": "GitLab Omnibus upgrade playbook",
+      "url": "/projects/gitlab-omnibus-upgrade-playbook/",
+      "section": "Overview",
+      "text": "An Ansible playbook that upgrades GitLab Omnibus along the supported upgrade path with backups, background migration checks and rollback notes."
+    },
+    {
+      "id": "resume-0",
+      "title": "Résumé",
+      "url": "/resume/",
+      "section": "Experience",
+      "text": "Rakshith S P is a cloud and platform engineer at Ensono working on Azure landing zones, Terraform, Kubernetes, CI/CD pipelines and site reliability engineering for enterprise customers."
+    },
+    {
+      "id": "rag-0",
+      "title": "Local RAG agent platform",
+      "url": "/projects/local-rag-agent-platform/",
+      "section": "Overview",
+      "text": "A local retrieval augmented generation platform that indexes documents with embeddings, runs open weight LLM models on a workstation GPU and exposes an agent API with tool calling."
+    },
+    {
+      "id": "trader-0",
+      "title": "Agentic paper trader",
+      "url": "/projects/agentic-paper-trader/",
+      "section": "Overview",
+      "text": "An agentic paper trading bot that combines market data, news sentiment and risk rules, executing simulated orders only and logging every decision for review."
+    },
+    {
+      "id": "house-0",
+      "title": "Bhagamandala house 3D",
+      "url": "/projects/bhagamandala-house-3d/",
+      "section": "Overview",
+      "text": "A three.js walkthrough of a planned family house in Bhagamandala, generated from floor plans with parametric walls, roof and lighting."
+    }
+  ]
+}

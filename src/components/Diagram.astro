@@ -1,0 +1,147 @@
+---
+import fs from 'node:fs';
+import path from 'node:path';
+
+// Renders a build-time Mermaid diagram (scripts/diagrams.mjs) in both theme variants.
+interface Props {
+  src: string; // "/diagrams/<slug>.svg"
+  alt: string;
+  caption?: string;
+}
+const { src, alt, caption } = Astro.props;
+const variant = (v: 'dark' | 'light') => src.replace(/\.svg$/, `.${v}.svg`);
+const size = (p: string) => {
+  try {
+    const head = fs.readFileSync(path.join(process.cwd(), 'public', p), 'utf8').slice(0, 2000);
+    const vb = head.match(/viewBox="[\d.\-]+ [\d.\-]+ ([\d.]+) ([\d.]+)"/);
+    return vb ? { w: Math.round(+vb[1]), h: Math.round(+vb[2]) } : null;
+  } catch {
+    return null;
+  }
+};
+const dark = size(variant('dark'));
+const light = size(variant('light'));
+// Mermaid renders at 17px, so 0.7× natural size keeps labels at ~12px. Below that width the frame scrolls
+// horizontally instead of shrinking the diagram to a texture. Above it, the diagram grows up to natural
+// size (or a 1100px height for tall flows) and never upscales.
+const MIN_SCALE = 0.7;
+const MAX_H = 1100;
+const fit = (d: { w: number; h: number }) => {
+  const min = Math.min(1900, Math.max(400, Math.round((d.w * MIN_SCALE) / 100) * 100));
+  const w = Math.max(min, Math.round(Math.min(d.w, (d.w * MAX_H) / d.h)));
+  return { w, h: Math.round((w * d.h) / d.w), min };
+};
+const wide = !!dark && dark.w / dark.h > 2.2;
+const fd = dark && fit(dark);
+const fl = light && fit(light);
+---
+
+{
+  fd && fl && (
+    <figure class="diagram">
+      <a
+        href={variant('dark')}
+        class="frame d-dark"
+        data-wide={wide ? '' : undefined}
+        data-minw={fd.min}
+        target="_blank"
+        rel="noopener"
+        aria-label="Open the diagram full size"
+      >
+        <img src={variant('dark')} alt={alt} width={fd.w} height={fd.h} loading="lazy" decoding="async" />
+      </a>
+      <a
+        href={variant('light')}
+        class="frame d-light"
+        data-wide={wide ? '' : undefined}
+        data-minw={fl.min}
+        target="_blank"
+        rel="noopener"
+        aria-label="Open the diagram full size"
+      >
+        <img src={variant('light')} alt={alt} width={fl.w} height={fl.h} loading="lazy" decoding="async" />
+      </a>
+      <figcaption class="mono">
+        <span>fig.</span> {caption ?? alt}
+        <em class="hint" data-wide={wide ? '' : undefined}>
+          Scroll sideways or open full size.
+        </em>
+      </figcaption>
+    </figure>
+  )
+}
+
+<style>
+  .diagram {
+    margin: 0;
+  }
+  .frame {
+    display: block;
+    padding: clamp(1rem, 3vw, 2rem);
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius);
+    background:
+      radial-gradient(circle at 1px 1px, var(--grid) 1px, transparent 0) 0 0 / 18px 18px,
+      var(--bg-sunken);
+    cursor: zoom-in;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: thin;
+    scrollbar-color: var(--line) transparent;
+    transition: border-color var(--t-2);
+  }
+  .frame:hover {
+    border-color: var(--line);
+  }
+  img {
+    display: block;
+    margin-inline: auto;
+    max-width: 100%;
+    height: auto;
+  }
+  /* Legibility floor (min-width beats max-width): narrower frames scroll instead of shrinking the labels. */
+  [data-minw='400'] img { min-width: 400px; }
+  [data-minw='500'] img { min-width: 500px; }
+  [data-minw='600'] img { min-width: 600px; }
+  [data-minw='700'] img { min-width: 700px; }
+  [data-minw='800'] img { min-width: 800px; }
+  [data-minw='900'] img { min-width: 900px; }
+  [data-minw='1000'] img { min-width: 1000px; }
+  [data-minw='1100'] img { min-width: 1100px; }
+  [data-minw='1200'] img { min-width: 1200px; }
+  [data-minw='1300'] img { min-width: 1300px; }
+  [data-minw='1400'] img { min-width: 1400px; }
+  [data-minw='1500'] img { min-width: 1500px; }
+  [data-minw='1600'] img { min-width: 1600px; }
+  [data-minw='1700'] img { min-width: 1700px; }
+  [data-minw='1800'] img { min-width: 1800px; }
+  [data-minw='1900'] img { min-width: 1900px; }
+  :global(:root[data-theme='light']) .d-dark,
+  :global(:root:not([data-theme='light'])) .d-light {
+    display: none;
+  }
+  figcaption {
+    margin-top: 0.75rem;
+    max-width: 72ch;
+    font-size: 0.75rem;
+    line-height: 1.5;
+    color: var(--fg-faint);
+  }
+  figcaption span {
+    color: var(--signal);
+  }
+  .hint {
+    display: none;
+    font-style: normal;
+    color: var(--fg-muted);
+  }
+  /* Wide diagrams always scroll; on phones every diagram does. */
+  .hint[data-wide] {
+    display: inline;
+  }
+  @media (max-width: 480px) {
+    .hint {
+      display: inline;
+    }
+  }
+</style>

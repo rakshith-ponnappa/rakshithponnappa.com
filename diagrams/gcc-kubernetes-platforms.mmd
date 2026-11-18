@@ -1,0 +1,16 @@
+flowchart TD
+    GL["Self-hosted GitLab<br/>on Kubernetes"] --> SEC["Security-integrated<br/>pipelines"]
+    SEC --> HB["Harbor<br/>container registry"]
+    subgraph K8S["Kubernetes platforms"]
+        GKE["GKE"]
+        EKS["EKS"]
+        AKS["AKS"]
+        TKGS["Tanzu TKGS<br/>on vSphere 7<br/>Blockchain-as-a-Service"]
+    end
+    HB --> GKE & EKS & AKS & TKGS
+    subgraph OPS["Shared production layer"]
+        OBS["Istio mesh, Fluentd logs,<br/>Jaeger tracing, Kasten backup"]
+    end
+    GKE & EKS & AKS & TKGS --> OBS
+    NET["Network policies, Cloud NAT,<br/>Private Link, VPC peering, IAM"] -.->|"governs"| K8S
+    K8S --> DATA["Real-time pipelines<br/>Kinesis and Confluent Kafka"]

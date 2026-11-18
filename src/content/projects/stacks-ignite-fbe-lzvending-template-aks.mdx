@@ -1,0 +1,68 @@
+---
+title: "Landing-zone vending + AKS template"
+repo: "https://github.com/rakshith-ponnappa/stacks-ignite-fbe-lzvending-template-aks"
+tagline: "A sanitised copy of the source template a landing-zone vending workflow uses to scaffold AKS workload subscriptions: private AKS, spoke networking, optional data and edge services, and a two-region promotion pipeline."
+category: "platform"
+year: 2026
+status: "active"
+stack: ["Terraform 1.13", "azurerm ~> 4.62", "azapi", "Azure Verified Modules", "Azure/aks/azurerm 11.3.0", "AKS App Routing add-on", "Azure Front Door + Private Link Service", "GitHub Actions (reusable workflows)", "Infracost", "Checkov", "TFLint", "taskctl"]
+highlights:
+  - "One template, scaffolded per application: vending creates the repo, the template creates the landing zone."
+  - "Moves ingress from a Helm-managed NGINX release to the AKS App Routing add-on with a Terraform removed block, no manual state surgery."
+  - "Front Door reaches a private cluster through an internal NGINX controller and an AKS-created Private Link Service."
+  - "Two parallel region chains promote DEV to UAT to PRD after a shared build and cost-estimate stage."
+metrics:
+  - { value: "6", label: "environment × region workspaces" }
+  - { value: "3", label: "ingress patterns behind feature flags" }
+  - { value: "24", label: "Checkov suppressions, each justified" }
+  - { value: "2", label: "regions promoted in parallel" }
+diagram: "/diagrams/stacks-ignite-fbe-lzvending-template-aks.svg"
+diagramAlt: "The vending workflow scaffolds an application repository from the template. The repository's pipeline runs a shared build and a cost estimate, then promotes through DEV, UAT and PRD in East US 2 and Central US in parallel. Each deploy reads connectivity, identity and management remote state and creates resource groups, a spoke network, a private AKS cluster, Log Analytics, and optional ACR, Front Door, PostgreSQL and Key Vault. Front Door reaches the cluster through a Private Link Service on an internal App Routing NGINX controller. Application-layer resources are scaffolded later by a separate orchestration workflow."
+order: 9
+---
+
+## The problem
+
+On a retail client's Azure platform, application teams needed AKS landing zones that were consistent, compliant and quick to stand up, across three environments and two regions. Hand-building each one produced drift. The answer was landing-zone vending: a provisioning workflow scaffolds a new application repository from a source template, and that repository's pipeline builds the landing zone.
+
+This is a public, sanitised copy of the AKS source template I worked on. Placeholder tokens such as `__APPLICATION_NAME__` are expected and must stay unresolved here, because the vending workflow fills them in when it scaffolds a new repository.
+
+## How it works
+
+The root module in `deploy/core/terraform` composes the landing-zone substrate:
+
+- **Naming and tagging** from versioned shared modules, and resource groups per component from the Azure Verified Module.
+- **Spoke networking** with VNet DNS servers taken from the identity remote state. Connectivity remote state supplies the virtual hub and private DNS zones; management remote state supplies the Azure Monitor Private Link Scope that the workload Log Analytics workspace joins.
+- **A private AKS cluster** with local accounts disabled, host encryption on both node pools, user-defined-routing egress, workload identity, an OIDC issuer, and a system pool tainted `CriticalAddonsOnly` so workloads run on the user pool.
+- **Optional services behind flags:** ACR, Front Door, PostgreSQL Flexible Server and Key Vault, mostly through Azure Verified Modules.
+- **Three ingress patterns:** an internal NGINX controller from the App Routing add-on fronted by a Private Link Service for Front Door; AGIC on a brown-field Application Gateway; and an Application Gateway network-isolation variant.
+
+Each repository has six workspace variable files (dev, uat and prd in East US 2 and Central US). The core pipeline runs a shared build and an Infracost estimate, then two parallel chains: DEV, UAT and PRD in East US 2, and the same in Central US, joining at a final tagging stage. Pull requests run the DEV East US 2 path only, and Central US is opt-in. Application-layer resources (namespaces, databases, Front Door endpoints, WAF policies, workload identity bindings) are deliberately left to a separate app-orchestration workflow.
+
+## Engineering decisions
+
+**Retire the Helm ingress with a `removed` block.** NGINX ingress on AKS was being retired in favour of the managed App Routing add-on. Rather than asking every derived repository to edit state by hand, the template declares `removed { from = module.ingress }` with `destroy = true`, so the next apply cleanly destroys the old Helm release without provider cycles. The default App Routing controller is disabled natively, and an internal `NginxIngressController` takes its place.
+
+**`kubectl_manifest` over `kubernetes_manifest`.** The App Routing CRD does not exist until the cluster does, and `kubernetes_manifest` needs the CRD schema at plan time, which fails on first apply. `kubectl_manifest` applies like `kubectl` and does not.
+
+**Clean up what AKS creates behind your back.** The Private Link Service is created by AKS as a side effect, not by Terraform, and it holds a reference to the internal load balancer that blocks destroy. A `terraform_data` destroy provisioner deletes it with the Azure CLI and waits for Azure to release the references.
+
+**Explicit waits for eventual consistency.** RBAC and network-isolation features in Azure are eventually consistent. The template uses named `time_sleep` resources (90 seconds for DNS-zone role propagation before cluster creation, 60 and 120 seconds after it, 120 for the PLS, 300 for Application Gateway isolation) rather than relying on retries.
+
+**Suppressions are documented, not silent.** All 24 Checkov suppressions are listed in the README with a reason, from module-source pinning conventions to WAF being enforced at Front Door rather than at the Application Gateway.
+
+**Lock state down after apply.** Every deploy job asks the shared template to lock down both regional state storage accounts after apply, and the backend uses Entra ID auth.
+
+## Results & evidence
+
+- The README was last validated against the code on 2026-03-30 and documents every root module, external module version, provider constraint, input, output, required variable and secret, and workflow permission.
+- Validation entry points cover pre-commit, `terraform fmt` and `validate`, TFLint, Checkov with the suppression file, and terraform-docs.
+- This template is the pattern behind the AKS ingress retirement I scoped as part of an Azure landing zone audit, written up in my work case studies.
+
+## Limitations & next steps
+
+- **Not runnable on its own.** It depends on private shared pipeline templates, naming and tagging modules, self-hosted regional runners and remote state from platform stacks that are not in this repository.
+- **Service-principal secret authentication.** The pipeline still expects `ARM_CLIENT_SECRET`; moving to OIDC federated credentials would remove a long-lived secret.
+- **Cost estimates cover East US 2 only.** Central US deployments are not estimated.
+- **Fixed waits are a trade-off.** Sleeps make applies slower and still assume propagation finishes in time.
+- **Next:** OIDC for the pipeline, cost estimates for both regions, and a pinned commit SHA for module sources in place of the tag convention Checkov currently has suppressed.

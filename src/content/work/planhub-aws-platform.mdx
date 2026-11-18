@@ -1,0 +1,79 @@
+---
+title: "SRE & platform engineering for a construction-tech SaaS: AWS on Terraform, zero-downtime releases"
+client: "PlanHub"
+industry: "Construction tech (preconstruction SaaS)"
+employer: "Freelance"
+period: "Jun 2023 – Jul 2025"
+role: "Site Reliability & Platform Engineer (freelance, 2 years 1 month)"
+summary: "For two years I was PlanHub's freelance SRE and platform engineer: I owned the AWS platform in Terraform, ran the developer platform (QA/UAT/Prod delivery with Boto3 blue/green cut-overs across 5 service tiers), kept production reliable, moved routine operations onto 7 EventBridge-scheduled Lambda jobs and closed security and compliance gaps, including 39 SSH keys moved into 1Password."
+clouds: ["AWS"]
+stack: ["Terraform", "VPC", "RDS PostgreSQL", "ALB", "Route53", "ACM", "ECS Fargate", "ECR", "CloudWatch", "CodePipeline", "CodeBuild", "CodeDeploy", "GitHub", "Python (Boto3)", "EventBridge", "Lambda", "Fivetran", "Redshift", "QuickSight", "1Password", "ClamAV", "Slack"]
+metrics:
+  - { value: "5", label: "service tiers on blue/green deployment" }
+  - { value: "7", label: "EventBridge-scheduled Lambda jobs" }
+  - { value: "39", label: "SSH keys migrated to 1Password" }
+  - { value: "3", label: "pipeline environments: QA, UAT, Prod" }
+diagram: "/diagrams/planhub-aws-platform.svg"
+diagramAlt: "GitHub changes flow through CodePipeline to QA, UAT and Prod, where Boto3 blue/green automation shifts ALB listener rules and DNS between environments in a Terraform-defined VPC with RDS PostgreSQL, while EventBridge schedules drive Lambda jobs and Fivetran feeds Redshift for private QuickSight reporting."
+order: 5
+featured: true
+---
+
+## Context
+
+[PlanHub](https://planhub.com) is a US preconstruction marketplace: general contractors use it to find bidders and manage bid coverage, subcontractors to find projects and prepare bids, and suppliers to reach the contractors pricing work. Contractors rely on it while they are actively bidding, so downtime or a bad release lands on someone's deadline.
+
+From June 2023 to July 2025 I was PlanHub's freelance **site reliability and platform engineer**. I owned the AWS platform end to end: the network and data tier, the developer platform that ships the product, the scheduled jobs that keep it tidy, the analytics feed, and security and compliance. The brief was two things at once: keep the developer platform moving for the engineering team, and keep production reliable for the contractors using it.
+
+## Constraints
+
+- **Production traffic during releases.** A SaaS product used by customers cannot take a maintenance window for every deploy, so cut-overs had to be zero-downtime.
+- **A developer platform, not just infrastructure.** Engineers needed QA, UAT and Prod environments they could trust and a release path they didn't have to think about.
+- **Customer data with compliance obligations.** Encryption, IAM and data handling had to meet HIPAA and GDPR expectations.
+- **Several service tiers, one release process.** Each of the 5 tiers needed the same deployment behaviour, not five hand-tuned variants.
+- **Three environments that must stay alike.** QA, UAT and Prod are only useful if what passes in one predicts what happens in the next.
+- **Analytics without exposing data.** Reporting had to reach the warehouse over private connectivity rather than a public endpoint.
+
+## What I did
+
+1. **Multi-tier AWS infrastructure in Terraform.** I designed the VPC, RDS PostgreSQL with read replicas, an Application Load Balancer, NAT Gateway, Route53 and ACM certificates, all as code, and ran the containerised services on ECS Fargate with ECR and CloudWatch log routing.
+2. **QA/UAT/Prod CI/CD.** I built the delivery path on CodePipeline, CodeBuild and CodeDeploy with GitHub as the source, and added Slack notifications so release status reached the team without anyone watching a console.
+3. **Blue/green deployment automation.** I wrote the cut-over logic in Python with Boto3 and applied it across all 5 service tiers. It manages ALB listener rules and the DNS cut-over, so traffic moves to the new environment only when it is ready.
+4. **Event-driven operations.** I moved routine production chores onto 7 EventBridge schedules driving Lambda functions for archival, cleanup and push notifications.
+5. **Analytics pipeline.** I architected a Fivetran to Redshift pipeline and set up private VPC connectivity for QuickSight, so dashboards read from the warehouse without a public path.
+6. **Security and compliance.** I put HIPAA- and GDPR-aligned encryption, IAM controls and data-handling guardrails in place, migrated 39 SSH keys into 1Password and deployed ClamAV scanning across the environment.
+
+## Key decisions
+
+| Decision | Why | Trade-off |
+|---|---|---|
+| Blue/green over in-place deploys | Switching ALB listener rules and DNS gives an instant, well-understood rollback: point traffic back at the old environment. | Two environments run side by side during a release, which costs more for that window. |
+| The same Boto3 cut-over automation for all 5 tiers | Shared automation means a fix or improvement lands everywhere at once and every tier behaves the same on release day. | The automation has to stay generic enough for every tier, which takes discipline as tiers diverge. |
+| AWS-native pipeline tooling | CodePipeline, CodeBuild and CodeDeploy sit inside the same account boundary and IAM model as the workloads they deploy. | Less portable than a cloud-agnostic CI system. |
+| EventBridge and Lambda for scheduled jobs | Schedules become visible, versioned resources rather than cron entries on a server someone has to keep alive. | Each job needs its own packaging, permissions and failure handling. |
+| Private QuickSight connectivity | Keeps the reporting path to Redshift off the public internet. | More networking to design and maintain than a public endpoint. |
+| SSH keys in a shared vault | 39 keys in 1Password gives one place to see, rotate and revoke access. | Engineers change how they fetch keys, which needs a short adjustment period. |
+
+### Why blue/green at the load balancer
+
+The cut-over lives at the ALB and in DNS rather than inside the application. That keeps the release mechanism independent of what each tier runs, which is what made it practical to apply the same automation to all 5 tiers. It also means the rollback path is exercised on every release, so it is not a procedure anyone has to remember under pressure.
+
+### Why schedules as code
+
+Archival, cleanup and push-notification jobs are easy to forget until they stop running. Putting all 7 on EventBridge makes them part of the platform definition: they can be reviewed, deployed per environment and reasoned about like any other resource.
+
+## Outcome
+
+- A multi-tier AWS platform defined in **Terraform**, from VPC to database replicas to certificates.
+- A **QA/UAT/Prod** pipeline on CodePipeline with Slack release notifications.
+- **Zero-downtime blue/green** releases across **5 service tiers** with the same Boto3 cut-over automation.
+- **7 EventBridge-scheduled Lambda jobs** handling archival, cleanup and push notifications.
+- A **Fivetran to Redshift** pipeline with private QuickSight connectivity.
+- **39 SSH keys** moved into 1Password, ClamAV scanning in place, and HIPAA- and GDPR-aligned controls on customer data.
+- Two years of keeping the developer platform moving and production reliable for a product contractors depend on while they bid.
+
+## What I'd do next
+
+- **Retire SSH where possible.** With keys centralised, the next step is to reduce how many are needed at all, for example by moving interactive access to AWS Systems Manager Session Manager.
+- **Automate the cut-over decision.** Tie the blue/green switch to health checks and error-rate alarms so a bad release rolls back without a human in the loop.
+- **Treat the scheduled jobs as one service.** Give all 7 EventBridge jobs a shared SLO and dashboard, so a missed run is as visible as a failed deploy.

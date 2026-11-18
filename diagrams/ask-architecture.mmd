@@ -1,0 +1,14 @@
+flowchart TD
+    B["Browser Ask panel<br/>POST /api/ask"] --> O["Origin check<br/>same-origin, prod domains, localhost"]
+    O --> RL["Rate limit<br/>RATE_LIMITER, 10 per 60 s per IP"]
+    RL -->|"over limit"| R429["429 + Retry-After"]
+    RL --> V["Validate and sanitise<br/>3 to 400 chars, no control chars"]
+    V --> INJ{"Injection pre-filter"}
+    INJ -->|"match"| REF["mode: refused<br/>links to resume and contact"]
+    INJ --> BM["BM25 top 6<br/>over corpus.json from ASSETS"]
+    BM --> TH{"isAnswerable?<br/>score ≥ 2.5, and IDF coverage ≥ 0.65<br/>when terms are unseen"}
+    TH -->|"yes"| REF
+    TH -->|"no"| AI["Workers AI<br/>system rules + delimited context blocks"]
+    AI --> CV["Citation validation<br/>renumber n, strip unknown URLs"]
+    CV --> OUT["mode: llm<br/>answer + citations"]
+    AI -->|"error, quota, timeout or empty"| FB["mode: retrieval<br/>top passages as excerpts"]

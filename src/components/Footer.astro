@@ -1,0 +1,147 @@
+---
+import Icon from './Icon.astro';
+import { profile } from '../data/profile';
+import { build } from '../lib/site';
+import { getStatus, STATE_TONE } from '../lib/status';
+const { overall } = await getStatus();
+const repo = `${profile.github}/rakshithponnappa.dev`;
+const year = build.time.getUTCFullYear();
+const stamp = build.time.toISOString().slice(0, 16).replace('T', ' ') + ' UTC';
+---
+
+<footer class="site-footer">
+  <div class="container-x">
+    <div class="cols">
+      <div class="status">
+        <p class="eyebrow">Status</p>
+        <p class="ok">
+          <a href="/status/"><span class="dot" data-pulse data-tone={STATE_TONE[overall.status]}></span> {overall.headline}</a>
+        </p>
+        <dl class="mono meta">
+          {
+            build.sha !== 'local' && (
+              <div>
+                <dt>build</dt>
+                <dd>
+                  <a class="link" href={`${repo}/commit/${build.sha}`}>{build.sha}</a>
+                </dd>
+              </div>
+            )
+          }
+          <div><dt>deployed</dt><dd><time datetime={build.time.toISOString()}>{stamp}</time></dd></div>
+          <div><dt>runtime</dt><dd>Astro 7 · Cloudflare Workers</dd></div>
+        </dl>
+      </div>
+      <nav aria-label="Site map">
+        <p class="eyebrow">Site</p>
+        <ul>
+          <li><a href="/work/">Work</a></li>
+          <li><a href="/projects/">Projects</a></li>
+          <li><a href="/experience/">Experience</a></li>
+          <li><a href="/credentials/">Credentials</a></li>
+          <li><a href="/resume/">Résumé</a></li>
+          <li><a href="/contact/">Contact</a></li>
+        </ul>
+      </nav>
+      <nav aria-label="Elsewhere">
+        <p class="eyebrow">Elsewhere</p>
+        <ul>
+          <li><a href={profile.github} rel="me noopener">GitHub <Icon name="arrow-up-right" size={13} /></a></li>
+          <li><a href={profile.linkedin} rel="me noopener">LinkedIn <Icon name="arrow-up-right" size={13} /></a></li>
+          <li><a href={`mailto:${profile.email}`}>Email</a></li>
+          <li><a href={profile.phoneHref}>Phone</a></li>
+        </ul>
+      </nav>
+      <nav aria-label="Machine-readable">
+        <p class="eyebrow">For machines</p>
+        <ul class="mono small">
+          <li><a href="/evals/">/evals</a></li>
+          <li><a href="/llms.txt">/llms.txt</a></li>
+          <li><a href="/resume.json">/resume.json</a></li>
+          <li><a href="/corpus.json">/corpus.json</a></li>
+          <li><a href="/.well-known/security.txt">/security.txt</a></li>
+        </ul>
+      </nav>
+    </div>
+    <div class="base">
+      <span>© {year} {profile.fullName}</span>
+      <span class="mono desktop-only">Press <kbd data-mod>⌘K</kbd> anywhere</span>
+    </div>
+  </div>
+</footer>
+
+<style>
+  .site-footer {
+    margin-top: clamp(4rem, 8vw, 7rem);
+    border-top: 1px solid var(--line-soft);
+    padding-block: 3.5rem 2rem;
+    font-size: 0.92rem;
+    color: var(--fg-muted);
+    background: linear-gradient(to bottom, transparent, var(--bg-sunken));
+  }
+  .cols {
+    display: grid;
+    grid-template-columns: 1.6fr repeat(3, 1fr);
+    gap: 2.5rem;
+  }
+  .eyebrow {
+    margin-bottom: 0.9rem;
+  }
+  .ok a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    color: var(--fg);
+    font-weight: 500;
+  }
+  .meta {
+    margin-top: 1rem;
+    display: grid;
+    gap: 0.3rem;
+    font-size: 0.78rem;
+  }
+  .meta div {
+    display: flex;
+    gap: 0.75rem;
+  }
+  .meta dt {
+    width: 5.5rem;
+    color: var(--fg-faint);
+  }
+  ul {
+    display: grid;
+    gap: 0.5rem;
+  }
+  ul a {
+    display: inline-flex;
+    min-height: 1.5rem;
+    align-items: center;
+    gap: 0.3rem;
+    transition: color var(--t-2);
+  }
+  ul a:hover {
+    color: var(--fg);
+  }
+  .small {
+    font-size: 0.82rem;
+  }
+  .base {
+    margin-top: 3rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--line-soft);
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 1rem;
+    font-size: 0.82rem;
+    color: var(--fg-faint);
+  }
+  @media (max-width: 860px) {
+    .cols {
+      grid-template-columns: 1fr 1fr;
+    }
+    .status {
+      grid-column: 1 / -1;
+    }
+  }
+</style>

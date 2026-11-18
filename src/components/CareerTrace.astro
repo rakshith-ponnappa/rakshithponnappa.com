@@ -1,0 +1,424 @@
+---
+import { getCollection } from 'astro:content';
+import { experience, profile, fmtMonth } from '../data/profile';
+
+interface Props {
+  compact?: boolean;
+}
+const { compact = false } = Astro.props;
+
+const T0 = 2014;
+const T1 = new Date().getUTCFullYear() + 1;
+const years = Array.from({ length: T1 - T0 }, (_, i) => T0 + i);
+const span = (T1 - T0) * 12;
+const now = new Date();
+const toM = (ym: string | null) => {
+  if (!ym) return (now.getUTCFullYear() - T0) * 12 + now.getUTCMonth() + 1;
+  const [y, m] = ym.split('-').map(Number);
+  return (y - T0) * 12 + (m - 1);
+};
+const dur = (a: string, b: string | null) => {
+  const n = toM(b) - toM(a);
+  const y = Math.floor(n / 12);
+  const m = n % 12;
+  return [y && `${y}y`, m && `${m}m`].filter(Boolean).join(' ') || '<1m';
+};
+const rows = [...experience].sort((a, b) => a.start.localeCompare(b.start));
+const total = dur(profile.careerStart.slice(0, 7), null);
+// The "now" cursor sits at the end of the build month, the same instant open-ended spans run to.
+const nowX = (toM(null) / span) * 1000;
+const nowLabel = fmtMonth(`${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`);
+
+// Client chips link to a case study when its `client` field names that client (e.g. "State Street (PFI)" or a comma list).
+const norm = (t: string) => t.toLowerCase().replace(/\s*\(.*?\)\s*/g, ' ').trim();
+const caseFor = new Map<string, string>();
+for (const w of (await getCollection('work')).sort((a, b) => a.data.order - b.data.order)) {
+  for (const name of w.data.client.split(',').map(norm)) if (name && !caseFor.has(name)) caseFor.set(name, `/work/${w.id}/`);
+}
+---
+
+<div class:list={['trace', { compact }]}>
+  <div class="trace-head mono">
+    <span><span class="k">trace_id</span> rakshith-sp</span>
+    <span><span class="k">spans</span> {rows.length}</span>
+    <span><span class="k">duration</span> {total}</span>
+    <span class="legend"><i class="lg ft"></i> full-time <i class="lg ct"></i> contract <i class="lg nw"></i> now · {nowLabel}</span>
+  </div>
+
+  <div class="grid" data-trace={compact ? undefined : ''}>
+    <div class="axis" aria-hidden="true">
+      <span class="lbl"></span>
+      <div class="ticks">
+        {years.map((y) => <span class:list={{ odd: y % 2 === 1 }}>{`'${String(y).slice(2)}`}</span>)}
+      </div>
+      <span class="dur"></span>
+    </div>
+
+    {
+      rows.map((r) => {
+        const x = (toM(r.start) / span) * 1000;
+        const w = Math.max(((toM(r.end) - toM(r.start)) / span) * 1000, 6);
+        const Row = compact ? 'div' : 'details';
+        const Head = compact ? 'div' : 'summary';
+        return (
+          <Row class="span" data-kind={r.kind}>
+            <Head class="span-head">
+              <span class="lbl">
+                <span class="svc mono">{r.company}</span>
+                <span class="op">{r.title.replace(/\s*\(.*\)$/, '')}</span>
+              </span>
+              <svg class="bar" viewBox="0 0 1000 28" preserveAspectRatio="none" role="img" aria-label={`${fmtMonth(r.start)} to ${fmtMonth(r.end)}`}>
+                {years.map((_, i) => (
+                  <line x1={(i * 12000) / span} x2={(i * 12000) / span} y1="0" y2="28" class="gridline" />
+                ))}
+                <rect x={x} y="6" width={w} height="16" class="fill" />
+                <rect x={x} y="6" width="3" height="16" class="cap" />
+                {r.end === null && <rect x={x + w - 3} y="6" width="3" height="16" class="edge" />}
+                <line x1={nowX} x2={nowX} y1="0" y2="28" class="now" />
+              </svg>
+              <span class="dur mono tabular">{dur(r.start, r.end)}</span>
+            </Head>
+            {!compact && (
+              <div class="span-body">
+                <p class="when mono">
+                  {fmtMonth(r.start)} → {fmtMonth(r.end)} · {r.location}
+                </p>
+                <p class="sum">{r.summary}</p>
+                <ul class="bul">
+                  {r.bullets.map((b) => (
+                    <li>{b}</li>
+                  ))}
+                </ul>
+                {r.clients.length > 0 && (
+                  <div class="children">
+                    <span class="k mono">child spans</span>
+                    {r.clients.map((c) => {
+                      const href = caseFor.get(norm(c.label));
+                      return href ? (
+                        <a class="chip linked" href={href}>
+                          {c.label}
+                          {c.detail && <span class="cd"> · {c.detail}</span>}
+                          <span class="go" aria-hidden="true">
+                            ↗
+                          </span>
+                          <span class="sr-only"> (case study)</span>
+                        </a>
+                      ) : (
+                        <span class="chip">
+                          {c.label}
+                          {c.detail && <span class="cd"> · {c.detail}</span>}
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+          </Row>
+        );
+      })
+    }
+  </div>
+</div>
+
+<style>
+  .trace {
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius);
+    background: var(--bg-raised);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  .trace-head {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.6rem;
+    padding: 0.9rem 1.25rem;
+    border-bottom: 1px solid var(--line-soft);
+    font-size: 0.74rem;
+    color: var(--fg-muted);
+    background: var(--bg-sunken);
+  }
+  .k {
+    color: var(--fg-faint);
+    margin-right: 0.35rem;
+  }
+  .legend {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--fg-faint);
+  }
+  .lg {
+    display: inline-block;
+    width: 14px;
+    height: 6px;
+    border-radius: 2px;
+  }
+  .lg.ft {
+    background: var(--signal);
+  }
+  .lg.ct,
+  .lg.nw {
+    margin-left: 0.6rem;
+  }
+  .lg.ct {
+    background: var(--amber);
+  }
+  .lg.nw {
+    width: 2px;
+    height: 12px;
+    border-radius: 0;
+    background: var(--signal);
+  }
+  .grid {
+    --lbl: minmax(12rem, 18rem);
+    padding: 0.5rem 0.25rem 0.75rem;
+  }
+  .axis,
+  .span-head {
+    display: grid;
+    grid-template-columns: var(--lbl) minmax(0, 1fr) 4.5rem;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.35rem 1rem;
+  }
+  .ticks {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    color: var(--fg-faint);
+  }
+  .span {
+    border-radius: 10px;
+  }
+  .span-head {
+    list-style: none;
+    padding-block: 0.6rem;
+    border-radius: 10px;
+    transition: background var(--t-2);
+  }
+  details > .span-head {
+    cursor: pointer;
+  }
+  .span-head::-webkit-details-marker {
+    display: none;
+  }
+  details > .span-head:hover,
+  details[open] > .span-head {
+    background: color-mix(in oklch, var(--fg) 4%, transparent);
+  }
+  .lbl {
+    display: grid;
+    min-width: 0;
+  }
+  .svc {
+    font-size: 0.78rem;
+    color: var(--fg);
+  }
+  .op {
+    font-size: 0.8rem;
+    color: var(--fg-faint);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .bar {
+    width: 100%;
+    height: 28px;
+    overflow: visible;
+  }
+  .gridline {
+    stroke: var(--line-soft);
+    stroke-width: 1;
+    vector-effect: non-scaling-stroke;
+  }
+  /* Bars are the content, so they clear 3:1 non-text contrast in both themes. */
+  .trace {
+    --trace-a: 60%;
+  }
+  :global(:root[data-theme='light']) .trace {
+    --trace-a: 72%;
+  }
+  .fill {
+    fill: color-mix(in oklch, var(--signal) var(--trace-a), transparent);
+  }
+  .cap,
+  .edge {
+    fill: var(--signal);
+  }
+  [data-kind='contract'] .fill {
+    fill: color-mix(in oklch, var(--amber) var(--trace-a), transparent);
+  }
+  [data-kind='contract'] .cap {
+    fill: var(--amber);
+  }
+  .span-head:hover .fill,
+  .span-head:focus-visible .fill {
+    fill: var(--signal);
+  }
+  [data-kind='contract'] .span-head:hover .fill,
+  [data-kind='contract'] .span-head:focus-visible .fill {
+    fill: var(--amber);
+  }
+  .now {
+    stroke: var(--signal);
+    stroke-width: 1.5;
+    stroke-dasharray: 3 3;
+    vector-effect: non-scaling-stroke;
+  }
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .dur {
+    font-size: 0.75rem;
+    color: var(--fg-muted);
+    text-align: right;
+  }
+  .span-body {
+    padding: 0.5rem 1rem 1.5rem calc(1rem + 0px);
+    margin-left: 1rem;
+    border-left: 1px dashed var(--line);
+    padding-left: 1.25rem;
+    max-width: 52rem;
+  }
+  .when {
+    font-size: 0.75rem;
+    color: var(--fg-faint);
+  }
+  .sum {
+    margin-top: 0.6rem;
+    color: var(--fg);
+  }
+  .bul {
+    margin-top: 0.75rem;
+    display: grid;
+    gap: 0.45rem;
+    color: var(--fg-muted);
+    font-size: 0.95rem;
+  }
+  .bul li {
+    position: relative;
+    padding-left: 1rem;
+  }
+  .bul li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.75em;
+    width: 0.45rem;
+    height: 1px;
+    background: var(--signal);
+  }
+  .children {
+    margin-top: 1rem;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .children .k {
+    font-size: 0.7rem;
+  }
+  .cd {
+    color: var(--fg-faint);
+  }
+  .linked {
+    min-height: 1.5rem;
+    gap: 0.3rem;
+    color: var(--fg);
+    border-color: color-mix(in oklch, var(--signal) 55%, transparent);
+    transition:
+      border-color var(--t-2),
+      background var(--t-2);
+  }
+  .linked .go {
+    color: var(--signal);
+    font-size: 0.85em;
+  }
+  .linked:hover,
+  .linked:focus-visible {
+    border-color: var(--signal);
+    background: var(--signal-soft);
+  }
+  @supports (animation-timeline: view()) {
+    @media (prefers-reduced-motion: no-preference) {
+      .fill,
+      .cap {
+        animation: grow linear both;
+        animation-timeline: view();
+        animation-range: entry 20% cover 45%;
+        transform-box: fill-box;
+        transform-origin: left center;
+      }
+      @keyframes grow {
+        from {
+          transform: scaleX(0.04);
+          opacity: 0.3;
+        }
+      }
+    }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .edge {
+      animation: edge-pulse 1.8s var(--ease-in-out) infinite;
+    }
+    @keyframes edge-pulse {
+      50% {
+        opacity: 0.25;
+      }
+    }
+  }
+  @media (max-width: 720px) {
+    .grid {
+      --lbl: minmax(0, 1fr);
+    }
+    .axis {
+      display: none;
+    }
+    .span-head {
+      grid-template-columns: 1fr auto;
+    }
+    .bar {
+      grid-column: 1 / -1;
+      grid-row: 2;
+    }
+    .ticks .odd {
+      visibility: hidden;
+    }
+  }
+</style>
+
+<script>
+  // Roving tabindex across the trace's spans: one Tab stop, arrows/Home/End move, Enter/Space toggle (native <summary>).
+  document.querySelectorAll<HTMLElement>('[data-trace]').forEach((grid) => {
+    const heads = [...grid.querySelectorAll<HTMLElement>('summary.span-head')];
+    if (!heads.length) return;
+    const focusAt = (i: number) => {
+      heads.forEach((h, j) => (h.tabIndex = j === i ? 0 : -1));
+      heads[i].focus();
+    };
+    heads.forEach((h, i) => (h.tabIndex = i ? -1 : 0));
+    grid.addEventListener('keydown', (e) => {
+      const i = heads.indexOf(e.target as HTMLElement);
+      if (i < 0) return;
+      const n = heads.length;
+      const to = { ArrowDown: i + 1, ArrowRight: i + 1, ArrowUp: i - 1, ArrowLeft: i - 1, Home: 0, End: n - 1 }[e.key];
+      if (to === undefined) return;
+      e.preventDefault();
+      focusAt((to + n) % n);
+    });
+    grid.addEventListener('focusin', (e) => {
+      const i = heads.indexOf(e.target as HTMLElement);
+      if (i >= 0) heads.forEach((h, j) => (h.tabIndex = j === i ? 0 : -1));
+    });
+  });
+</script>

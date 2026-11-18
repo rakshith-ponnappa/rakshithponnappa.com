@@ -1,0 +1,12 @@
+flowchart TD
+    K{"KILL file<br/>present?"} -->|"yes"| X["Exit"]
+    K -->|"no"| S["Screen 20-ticker watchlist<br/>price metrics + cooldowns"]
+    S --> TA["TradingAgents x3 per pick<br/>market, social, news,<br/>fundamentals analysts"]
+    LLM["OpenAI-compatible<br/>LLM endpoint"] -.-> TA
+    TA --> V["Majority vote<br/>median rating"]
+    V --> G{"Buy gate<br/>regime, earnings, factor rank,<br/>FinBERT, persona check"}
+    G -->|"blocked"| H["Hold / skip"]
+    G -->|"pass"| P["Plan orders<br/>10% per ticker, 25 per run,<br/>15% drawdown brake"]
+    P --> O["Alpaca PAPER limit orders<br/>idempotent client_order_id"]
+    O --> ST["state/ stops + cooldowns<br/>runs/ JSON + HTML"]
+    ST --> M["Monitor every 15 min<br/>no LLM: stop-loss,<br/>take half at +15%"]

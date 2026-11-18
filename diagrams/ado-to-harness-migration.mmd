@@ -1,0 +1,15 @@
+flowchart TD
+    subgraph QA["ALZ QA environment"]
+        direction TB
+        GHA["GitHub Actions<br/>layered deployment"] --> F["Platform foundations<br/>governance and policy"]
+        F --> C["Connectivity<br/>Terraform module, fixed"]
+        C --> L["Workload<br/>landing zones"]
+    end
+    subgraph MIG["Azure DevOps to Harness SaaS feasibility"]
+        direction TB
+        A["Azure DevOps<br/>pipeline inventory"] --> CK["Assessment<br/>checklists"]
+        CK --> CS["Complexity<br/>scoring"]
+        CK --> EX["Expression-syntax<br/>mapping"]
+        CS --> PL["5-week<br/>phased plan"]
+        EX --> PL
+    end

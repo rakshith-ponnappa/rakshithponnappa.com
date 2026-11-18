@@ -1,0 +1,104 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import CareerTrace from '../components/CareerTrace.astro';
+import FieldMap from '../components/FieldMap.astro';
+import ContactCTA from '../components/ContactCTA.astro';
+import Icon from '../components/Icon.astro';
+import { skills, profile } from '../data/profile';
+---
+
+<BaseLayout
+  title="Experience"
+  description="Twelve years across Capgemini, Intuitive, Ozone (Dubai and Oman), Ensono and Turing, rendered as a distributed trace, plus the full skills inventory."
+>
+  <section class="container-x page-head">
+    <p class="eyebrow">Experience</p>
+    <h1>The full trace.</h1>
+    <p class="lede">Every role since August 2014. Expand a span for the work, the clients and the outcomes.</p>
+    <a class="btn" href={profile.resumePdf} download><Icon name="download" /> Résumé PDF</a>
+  </section>
+
+  <section class="container-x">
+    <CareerTrace />
+  </section>
+
+  <section class="section container-x" aria-labelledby="skills-title">
+    <div class="section-head">
+      <p class="eyebrow">Inventory</p>
+      <h2 id="skills-title" class="section-title">The toolchain, <em>by layer.</em></h2>
+      <p class="lede">No skill bars. These are tools I have run in production or shipped to clients.</p>
+    </div>
+    <dl class="skills">
+      {
+        skills.map((s) => (
+          <div class="reveal">
+            <dt class="mono">{s.area}</dt>
+            <dd>
+              {s.items.map((i) => (
+                <span class="chip">{i}</span>
+              ))}
+            </dd>
+          </div>
+        ))
+      }
+    </dl>
+  </section>
+
+  <section class="section container-x" aria-labelledby="field-title">
+    <div class="section-head">
+      <p class="eyebrow">Field deployments</p>
+      <h2 id="field-title" class="section-title">On-site, <em>not just on-call.</em></h2>
+    </div>
+    <FieldMap />
+  </section>
+  <ContactCTA />
+</BaseLayout>
+
+<style>
+  .page-head {
+    padding-block: clamp(3rem, 7vw, 6rem) clamp(2rem, 4vw, 3rem);
+  }
+  h1 {
+    margin-top: 1rem;
+    font-size: var(--step-5);
+    letter-spacing: -0.05em;
+    line-height: 0.95;
+  }
+  .lede {
+    margin-top: 1.5rem;
+  }
+  .btn {
+    margin-top: 2rem;
+  }
+  .skills {
+    display: grid;
+    border-top: 1px solid var(--line-soft);
+  }
+  .skills div {
+    display: grid;
+    grid-template-columns: 15rem 1fr;
+    gap: 1.5rem;
+    padding: 1.25rem 0;
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .skills dt {
+    font-size: 0.8rem;
+    color: var(--fg-faint);
+    padding-top: 0.3rem;
+  }
+  .skills dd {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+  .skills .chip {
+    font-size: 0.78rem;
+    color: var(--fg);
+  }
+  @media (max-width: 720px) {
+    .skills div {
+      grid-template-columns: 1fr;
+      gap: 0.6rem;
+    }
+  }
+</style>

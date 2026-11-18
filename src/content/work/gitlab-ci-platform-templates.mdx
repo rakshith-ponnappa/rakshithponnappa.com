@@ -1,0 +1,71 @@
+---
+title: "Reusable GitLab CI platform templates with OIDC & security gates"
+client: "Multiple engagements"
+industry: "Cross-industry"
+employer: "Ensono"
+period: "2022 – present"
+role: "Principal Consultant, DevOps (template design & team lead)"
+summary: "I designed reusable GitLab CI templates that deploy to multiple clouds with short-lived OIDC tokens instead of stored keys and gate every merge request on SAST, DAST and secret detection, then made them part of the shared CI/CD standard the engineers I guide work to across engagements."
+clouds: ["Azure", "AWS", "GCP"]
+stack: ["GitLab CI", "OIDC", "SAST", "DAST", "Secret detection", "Merge request pipelines"]
+metrics:
+  - { value: "3", label: "clouds from one template library: AWS, Azure, GCP" }
+  - { value: "3", label: "merge-request gates: SAST, DAST, secrets" }
+diagram: "/diagrams/gitlab-ci-platform-templates.svg"
+diagramAlt: "A client project includes the shared template library; its merge request pipeline runs SAST, secret detection and DAST, blocks the merge on any failure, and once merged the deploy job exchanges a short-lived GitLab OIDC token for temporary credentials on AWS, Azure or GCP."
+order: 8
+featured: false
+---
+
+## Context
+
+Ensono runs several client programmes at once, and I'm the senior technical lead across them, setting the engineering standards the delivery teams work to. GitLab CI comes up again and again in those engagements.
+
+Without a shared baseline, every engagement re-solves the same problems: how the pipeline authenticates to the cloud, and where security scanning runs. The answers drift apart, and the differences are where the risk sits: a long-lived cloud key in a CI variable, a scanner that runs after the merge instead of before it, a deploy job any branch can trigger.
+
+I designed a set of reusable GitLab CI templates to make those answers the same everywhere: OIDC authentication for multi-cloud deployments, and SAST, DAST and secret detection gating every merge request. They became part of the common CI/CD, IaC, security-scanning and release standards I set for the team, and they were adopted across engagements.
+
+## Constraints
+
+- **Client isolation.** Templates can be shared; trust cannot. Each client's cloud accounts must trust only that client's pipelines.
+- **No stored cloud credentials.** A static key in a CI variable is a secret to leak, rotate and audit. The design had to remove it, not just protect it.
+- **Security before merge.** Findings are cheapest to fix while the change is still in review. A scan that runs after deployment is a report, not a gate.
+- **Usable by the whole team.** If a template is harder than writing the YAML by hand, people write the YAML by hand.
+- **Multi-cloud.** The same pipeline shape had to deploy to whichever cloud the client runs on.
+
+## What I did
+
+1. **A template library, not copy-paste.** In GitLab, reuse means `include` to pull shared job definitions into a project and `extends` to specialise them. I built the templates as security and deployment building blocks, so a client project's `.gitlab-ci.yml` is mostly includes plus a few variables.
+2. **OIDC for every cloud deployment.** GitLab can issue a signed, short-lived ID token to a job through the `id_tokens` keyword. The cloud validates that token against GitLab's OIDC issuer and exchanges it for temporary credentials: a role assumed with web identity on AWS, a federated credential on Azure, Workload Identity Federation on GCP. The templates wrap that exchange, so deploy jobs authenticate the same way on every cloud and no cloud key sits in a CI variable.
+3. **Trust scoped by claims.** The token carries claims such as the project path, the ref, whether the ref is protected and the target environment. The design point that matters most is that the cloud-side trust policy is where the security actually lives. Binding a production role to a protected branch or environment of one project means a feature branch, or another project on the same GitLab, cannot assume it.
+4. **MR-gated SAST and secret detection.** Static analysis and secret detection run in the merge request pipeline. A failing gate fails the pipeline, and the merge waits for a green one.
+5. **DAST against a running deployment.** DAST needs something to probe, so it runs against a deployed test instance of the change rather than against the source.
+6. **Adoption as a standard.** I made the templates part of the team's shared CI/CD and security-scanning standards, so engineers on a new engagement have a known-good starting point instead of a blank file.
+
+## Key decisions
+
+| Decision | Why | Trade-off |
+|---|---|---|
+| OIDC federation instead of stored cloud keys | Nothing long-lived to leak or rotate. Credentials expire with the job, and access is decided by claims the cloud can verify. | A trust relationship to configure per cloud and per client, and a failed token exchange is harder to debug the first time than a bad key. |
+| Shared job logic, per-client trust | How to deploy is generic and belongs in the template. Who may deploy where is client-specific and belongs in the client's cloud. | Every new client needs its federation set up before the first deploy works. |
+| Keep secret detection even with OIDC | OIDC removes the pipeline's keys, not the ones a developer pastes into a config file. | False positives need a clear, reviewed way to be allow-listed. |
+| Gate at the merge request, not at deploy | The author still has context, and the reviewer sees the finding next to the diff. | Longer MR pipelines, and DAST needs an environment to run against. |
+
+### Why OIDC is the centre of the design
+
+Static keys fail in predictable ways. They get copied into more projects than intended, they outlive the person who created them, and rotating them breaks pipelines, so they rarely get rotated. With federation, the question "can this job deploy to production?" is answered by a trust policy that reads verified claims. That policy can be reviewed, versioned and audited in one place, which is a far better conversation to have with a client's security team than a list of CI variables.
+
+## Outcome
+
+- Reusable GitLab CI templates **adopted across engagements**, as part of the shared engineering standard I set across programmes.
+- Cloud deployments authenticated with **short-lived OIDC tokens** rather than stored keys.
+- **SAST, DAST and secret detection as merge-request gates**, so findings surface before code merges rather than after it ships.
+
+I don't have a single headline number for this piece of work. The measure that matters is adoption: engineers across different clients reaching for the same templates.
+
+## What I'd do next
+
+- **Move to GitLab CI/CD components.** Components and the CI/CD Catalog give templates typed inputs, released versions and discoverability, which plain `include` files lack.
+- **Pin versions and bump them automatically.** Consumers pin a released version and a bot opens the upgrade merge request, so fixes spread without anyone's pipeline changing silently.
+- **Enforce the gates, don't just include them.** A project can delete an included job. Where the GitLab tier allows it, I would enforce scans centrally through security policies, so opting out needs an explicit, recorded exception.
+- **Measure it.** Track time from a new project to its first green deploy, and the median time to fix an MR security finding. Those two numbers show whether the templates are helping or getting in the way.

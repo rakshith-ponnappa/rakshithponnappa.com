@@ -1,0 +1,11 @@
+flowchart LR
+    CLI["python -m sandbox_conformance run<br/>--provider --only"] --> R["Runner"]
+    R -->|"select by category"| CAT["Check catalogue<br/>lifecycle, filesystem, snapshot,<br/>network, secrets, quota, optional"]
+    R -->|"SandboxProvider.create"| AD["Provider adapter<br/>fake, local-docker, vendor"]
+    AD --> SB["Sandbox under test"]
+    CAT -->|"probes via run, write_file,<br/>set_network_policy"| SB
+    SB --> V["Verdict tokens<br/>PASS, FAIL, SKIP, ERROR"]
+    R -->|"try/finally + atexit<br/>+ SIGTERM handler"| TD["Guaranteed teardown"]
+    V --> RED["Canary redaction"]
+    RED --> MD["Markdown matrix"]
+    RED --> JS["JSON evidence"]

@@ -1,0 +1,59 @@
+---
+import { getCollection, render } from 'astro:content';
+import ArticleLayout from '../../layouts/ArticleLayout.astro';
+
+export async function getStaticPaths() {
+  const items = (await getCollection('projects')).sort((a, b) => a.data.order - b.data.order);
+  return items.map((entry, i) => ({
+    params: { slug: entry.id },
+    props: {
+      entry,
+      prev: items[i - 1] && { href: `/projects/${items[i - 1].id}/`, title: items[i - 1].data.title },
+      next: items[i + 1] && { href: `/projects/${items[i + 1].id}/`, title: items[i + 1].data.title },
+    },
+  }));
+}
+
+const { entry, prev, next } = Astro.props;
+const { Content, headings } = await render(entry);
+const d = entry.data;
+const cat = { ai: 'AI system', platform: 'Platform', tools: 'Tool' }[d.category];
+const jsonLd = [
+  {
+    '@type': 'SoftwareSourceCode',
+    name: d.title,
+    description: d.tagline,
+    codeRepository: d.repo,
+    author: { '@id': `${Astro.site}#person` },
+    keywords: d.stack.join(', '),
+    url: new URL(`/projects/${entry.id}/`, Astro.site).toString(),
+  },
+];
+---
+
+<ArticleLayout
+  kind="projects"
+  slug={entry.id}
+  title={d.title}
+  eyebrow={`${cat} · ${d.year}${d.status === 'archived' ? ' · archived' : ''}`}
+  summary={d.tagline}
+  meta={[
+    { k: 'Type', v: cat },
+    { k: 'Status', v: d.status === 'archived' ? 'Archived' : 'Active' },
+    { k: 'Year', v: String(d.year) },
+    { k: 'Licence & code', v: 'Public on GitHub' },
+  ]}
+  metrics={d.metrics}
+  stack={d.stack}
+  highlights={d.highlights}
+  repo={d.repo}
+  diagram={d.diagram}
+  diagramAlt={d.diagramAlt}
+  headings={headings}
+  prev={prev}
+  next={next}
+  jsonLd={jsonLd}
+  ogImage={`/og/projects/${entry.id}.png`}
+>
+  <Content />
+</ArticleLayout>

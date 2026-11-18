@@ -1,0 +1,51 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "rakshithponnappa-dev",
+  "main": "worker/src/index.ts",
+  "compatibility_date": "2026-11-01",
+  // Served only on the custom domain; no duplicate *.workers.dev copy.
+  "workers_dev": false,
+
+  // Static Astro build. Only /api/* runs the Worker; everything else is served straight from assets
+  // (security headers for those come from public/_headers).
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*"],
+    "not_found_handling": "404-page",
+    "html_handling": "auto-trailing-slash"
+  },
+
+  "ai": { "binding": "AI" },
+
+  // ~10 requests / 60 s per key. Keys are "ask:<ip>" and "contact:<ip>".
+  "ratelimits": [
+    {
+      "name": "RATE_LIMITER",
+      "namespace_id": "1001",
+      "simple": { "limit": 10, "period": 60 }
+    },
+    // Stricter bucket for /api/contact (worker/src/contact.ts uses it when bound).
+    {
+      "name": "CONTACT_LIMITER",
+      "namespace_id": "1002",
+      "simple": { "limit": 3, "period": 60 }
+    }
+  ],
+
+  // Requires Email Routing on the zone. Delivery is limited to the account's verified destination addresses;
+  // the inbox itself is the CONTACT_TO secret so it never appears in the repo or on the site.
+  "send_email": [{ "name": "EMAIL" }],
+
+  "vars": {
+    "AI_MODEL": "@cf/meta/llama-3.1-8b-instruct-fp8-fast",
+    "CONTACT_FROM": "contact@rakshithponnappa.dev"
+  },
+  // Secrets (never commit): `npx wrangler secret put TURNSTILE_SECRET` and `npx wrangler secret put CONTACT_TO`.
+
+  "observability": { "enabled": true },
+
+  // Custom domain on the rakshithponnappa.dev zone (Cloudflare creates the DNS record and certificate).
+  // www is a separate one-file Worker that 301s to the apex: worker/www-redirect/.
+  "routes": [{ "pattern": "rakshithponnappa.dev", "custom_domain": true }]
+}

@@ -1,0 +1,87 @@
+---
+title: "Data-centre exit to Azure: 500+ VM estate, DR and live cutovers for State Street"
+client: "State Street (PFI)"
+industry: "Financial services"
+employer: "Ensono"
+period: "2022 – present"
+role: "Lead Cloud Architect, end to end (Terraform module design, migration, DR & cutover)"
+summary: "As lead architect I took State Street's PFI estate out of an NTT data centre and onto Azure end to end. I built the Terraform module library from scratch, stood up 500+ VMs with SQL Managed Instance, Oracle, load balancing and cross-region DR, and ran three production cutovers that put 10+ applications live."
+clouds: ["Azure"]
+stack: ["Terraform Enterprise", "Custom Terraform modules", "Azure Virtual Machines", "SQL Managed Instance", "Oracle on Azure", "Azure Load Balancer", "Azure Front Door", "Azure Site Recovery", "Recovery Services Vault", "Key Vault & disk encryption sets", "Private endpoints", "Harness", "OPA policy", "Ansible Tower"]
+metrics:
+  - { value: "500+", label: "VMs built from my modules and configured for DR" }
+  - { value: "10+", label: "applications migrated and live in production" }
+  - { value: "3", label: "production cutovers from the NTT data centre" }
+  - { value: "< 15 min", label: "steady-state RPO target for replicated VMs" }
+diagram: "/diagrams/state-street-azure-landing-zone-dr.svg"
+diagramAlt: "Applications move from the NTT data centre to Azure in three cutover waves. A custom Terraform module library (VM, SQL Managed Instance, Oracle, load balancer, Front Door, Key Vault and disk encryption, ASR and Recovery Services Vault) is applied through Terraform Enterprise and Harness behind OPA policy gates. It builds 500+ VMs mapped to SQL Managed Instances in the primary region, replicated through Azure Site Recovery to a private-endpoint, customer-managed-key vault in the DR region, with SQL MI geo-failover groups and alerting."
+order: 1
+featured: true
+---
+
+## Context
+
+State Street's PFI programme was moving a regulated production estate out of an **NTT-hosted data centre** and onto Azure: several applications, hundreds of Windows servers, SQL databases and Oracle, all of which had to land in a governed landing zone with disaster recovery from day one. I was the **lead architect, end to end**. I designed the target platform, built the Terraform module library it runs on, provisioned the estate, designed DR, and led the production cutovers.
+
+## Constraints
+
+- **Regulated and in production.** Every resource had to be code-defined, reviewed and traceable. Nothing was built by hand in the portal, and policy gates (OPA) checked every plan.
+- **A live data-centre exit.** Applications had to move without losing data or breaking downstream integrations, so each cutover had a fixed window and a rehearsed rollback.
+- **DR from day one.** Workloads couldn't land in Azure and get DR "later". Replication, recovery plans and database failover had to be part of the build.
+- **Private and customer-keyed.** Disks, vaults and key vaults used customer-managed keys, and control and replication traffic ran only over private endpoints.
+- **Scale and blast radius.** 500+ VMs and five applications shared one Terraform estate, so module design and state layout decided how safe every later change would be.
+
+## What I did
+
+1. **Designed and built the Terraform module library from scratch**, to State Street's standards. Each module carries its own tagging, policy and encryption conventions:
+   - **VMs:** Windows VMs with a disk encryption set per VM (CMK from Key Vault), availability zones, NICs, boot diagnostics, VM extensions and data-collection-rule associations, driven from `for_each` maps in tfvars.
+   - **SQL Managed Instance:** instances with Entra admin, plus geo-failover groups to the DR region.
+   - **Oracle:** the Oracle workloads deployed as part of the migration.
+   - **Traffic:** internal Azure Load Balancers with backend pools resolved by NIC, and Azure Front Door at the edge.
+   - **Security:** Key Vaults, disk encryption sets, managed identities and RBAC.
+   - **DR:** a Recovery Services Vault and an ASR replication module.
+2. **Provisioned the estate: 500+ VMs** across five applications, each mapped to its SQL Managed Instance tier and fronted by its load balancers. Everything went through reviewed pipelines and Terraform Enterprise behind OPA policy checks, including 12 mandatory governance tags on every resource group.
+3. **Built cross-region DR into the platform.**
+   - **Vault:** a Recovery Services Vault reachable only through private endpoints and encrypted with customer-managed keys, with ASR cache storage in the source region and CMK-encrypted replica disks in the DR region.
+   - **Recovery plans:** VMs are batched into replication groups of 16, each with its own recovery plan, so failover, test failover, re-protect and failback run batch by batch.
+   - **Databases:** SQL Managed Instances fail over through geo-failover groups.
+   - **Monitoring:** alerts cover replication health, RPO breaches, re-protect state and test failovers older than 90 days.
+4. **Migrated the applications and ran three production cutovers** from the NTT data centre. Each wave followed the same rehearsed sequence: freeze, final sync, switch traffic and DNS, validate (domain authentication, service start-up, database listeners), then decommission the source. **10+ applications** are now live in production on Azure.
+5. **Wrote the runbooks and handed over.** Runbooks cover adding or removing VMs from DR, test failover, failover, commit, re-protect and failback, plus knowledge-transfer sessions so the client team can operate the platform.
+6. **Then: splitting the Terraform estate.** The estate grew to **35,000 resources in one state**, so I led the [split into one workspace, repository and Harness pipeline per application](/work/state-street-terraform-enterprise-split/), moving delivery from Azure DevOps to Harness without rebooting a production VM.
+7. **And: a VM factory.** Replacement VM builds needed reruns and waited on security onboarding, so I designed and built a [VM factory with an image bakery](/work/state-street-vm-factory-image-bakery/): a versioned golden image and one gated Harness flow that cut VM build time from about 30 minutes to 2–3.
+8. **Alongside:** DR readiness drills with the platform team (Active Directory, Kerberos and DNS during failover; **54 secondary VMs** cleaned up afterwards).
+
+## Key decisions
+
+| Decision | Why | Trade-off |
+|---|---|---|
+| Build a module library instead of per-app Terraform | One VM, SQL MI, load balancer and DR pattern for every application keeps 500+ VMs consistent, reviewable and policy-compliant. | More upfront design. Modules must stay backwards-compatible as applications adopt them. |
+| A disk encryption set per VM, keys in Key Vault | Customer-managed encryption with a per-VM boundary, rotatable without rebuilding VMs. | More resources to manage and a hard dependency on the shared key vault. |
+| DR in the build, not after it | An estate that lands without replication is exposed from its first day in production. | Initial replication of hundreds of VMs takes days, so it had to be staged in waves. |
+| Recovery plans per batch of 16 VMs | Failover and testing run in manageable units, and one bad batch doesn't block the rest. | Batches depend on list order, so the VM list can only ever be appended to. |
+| Three cutover waves, not a big bang | Each wave proved the runbook and limited the blast radius of a bad night. | A longer programme, with temporary hybrid connectivity between the data centre and Azure. |
+| Databases fail over before VMs | Applications that start before their database is primary in the DR region fail on start-up. | Failover is a two-step runbook instead of one button. |
+| Split state by carving it, not by re-importing | The VM modules carry reboot provisioners, so re-importing would replace them and reboot production. Carving copies state verbatim and keeps the plan at zero changes. | Needs platform-team state permissions and a frozen workspace during the carve. |
+
+### Why the module design mattered most
+
+At 500+ VMs, the module is the platform. Every VM inherits its encryption, diagnostics, monitoring and DR wiring from the same code path. A new application is then a tfvars change, not a new design, and a fix lands everywhere in one reviewed change. The modules also pass plain identifiers between each other: load balancers resolve backends by NIC name, and ASR takes `{vm_name, resource_group}` pairs. That is what made it possible to later split the state per application without rewiring anything.
+
+### Why identity matters in a cutover and a failover
+
+Kerberos depends on name resolution. A VM that boots in Azure, whether after a cutover or a failover, has to resolve correctly and be resolved, or domain logins fail while the portal shows a healthy machine. That's why every cutover and failover runbook validates domain authentication, service start-up and the database listener, not just that the VM is running.
+
+## Outcome
+
+- **NTT data-centre exit delivered:** **3 production cutovers**, with **10+ applications** live on Azure.
+- **500+ VMs** built from a Terraform module library I designed from scratch, mapped to **SQL Managed Instances** with **Oracle** workloads deployed, behind **Azure Load Balancer** and **Front Door**.
+- **Cross-region DR** across the estate: ASR with a private-endpoint, customer-managed-key vault; batch-level recovery plans; SQL MI geo-failover groups; a steady-state **RPO target under 15 minutes**; and alerting.
+- Runbooks and knowledge transfer, so the client team operates the platform.
+- Follow-on work on the same estate: a [35,000-resource Terraform split](/work/state-street-terraform-enterprise-split/) per application, and a [VM factory and image bakery](/work/state-street-vm-factory-image-bakery/).
+
+## What I'd do next
+
+- **Make test failover routine.** Rotate one recovery plan through a test failover each week, so every batch is proven on a calendar.
+- **Build the DR side from the golden image.** Rebuilding it from the image bakery's promoted versions means every patch-cycle release also refreshes the recovery estate.
+- **Run continuous compliance per workspace.** With per-application state, run drift and policy checks per application on a schedule, not just at deploy time.

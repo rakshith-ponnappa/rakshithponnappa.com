@@ -1,0 +1,16 @@
+flowchart TD
+    GH["GitHub<br/>source"] --> CP["CodePipeline<br/>CodeBuild and CodeDeploy"]
+    CP -->|"release status"| SL["Slack<br/>notifications"]
+    CP --> ENV["QA, UAT, Prod"]
+    ENV --> BG["Boto3 blue/green<br/>5 service tiers"]
+    subgraph TF["AWS platform in Terraform"]
+        R53["Route53 and ACM<br/>DNS cut-over"]
+        ALB["ALB<br/>listener rules"]
+        APP["Blue and green<br/>service environments"]
+        RDS["RDS PostgreSQL<br/>with read replicas"]
+    end
+    BG --> R53 & ALB
+    R53 --> ALB --> APP --> RDS
+    EB["EventBridge<br/>7 schedules"] --> LM["Lambda<br/>archival, cleanup,<br/>push notifications"]
+    LM --> APP
+    FT["Fivetran<br/>managed ingestion"] --> RS["Redshift"] --> QS["QuickSight<br/>private VPC connectivity"]

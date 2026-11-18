@@ -1,0 +1,61 @@
+{
+  "name": "rakshithponnappa.dev",
+  "type": "module",
+  "version": "0.0.1",
+  "engines": {
+    "node": ">=22.23.4"
+  },
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro",
+    "test": "vitest run",
+    "cf:dev": "wrangler dev",
+    "cf:deploy": "npm run build && npm run pdf && wrangler deploy && wrangler deploy -c worker/www-redirect/wrangler.jsonc",
+    "diagrams": "node scripts/diagrams.mjs",
+    "status:record": "node scripts/status-record.mjs",
+    "check": "astro check",
+    "pdf": "node scripts/resume-pdf.mjs",
+    "icons": "node scripts/icons.mjs",
+    "test:e2e": "playwright test --project=chromium --project=firefox --project=webkit --project=mobile-chrome --project=mobile-safari --project=qa",
+    "test:e2e:user": "playwright test --project=chromium --project=firefox --project=webkit --project=mobile-chrome --project=mobile-safari",
+    "test:a11y": "playwright test --project=qa tests/qa/a11y.spec.ts tests/qa/keyboard.spec.ts tests/qa/motion.spec.ts",
+    "test:visual": "playwright test --project=visual",
+    "test:perf": "playwright test --project=perf && node tests/qa/perf/lighthouse.mjs",
+    "test:e2e:build": "astro build --outDir ./.build-qa-b",
+    "test:ai": "vitest run --config tests/vitest.config.ts tests/ai",
+    "test:ops": "vitest run --config tests/vitest.config.ts tests/ops",
+    "test:content": "vitest run --config tests/vitest.config.ts tests/content",
+    "test:all": "npm test && npm run test:ai && npm run test:content && npm run test:ops && npm run --if-present test:e2e",
+    "test:summary": "node tests/support/write-summary.mjs"
+  },
+  "dependencies": {
+    "@astrojs/mdx": "^8.1.6",
+    "@astrojs/sitemap": "^3.7.5",
+    "@fontsource-variable/geist": "^5.3.0",
+    "@fontsource-variable/geist-mono": "^5.3.0",
+    "@fontsource/instrument-serif": "^5.3.0",
+    "@tailwindcss/vite": "^4.3.5",
+    "astro": "^7.4.12",
+    "gsap": "^3.15.1",
+    "tailwindcss": "^4.3.5"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.12",
+    "@axe-core/playwright": "^4.14.0",
+    "@cloudflare/workers-types": "^5.20261118.1",
+    "@fontsource/geist": "^5.3.0",
+    "@fontsource/geist-mono": "^5.3.0",
+    "@playwright/test": "^1.65.1",
+    "@resvg/resvg-js": "^2.6.2",
+    "lighthouse": "^13.6.0",
+    "prettier": "^3.10.1",
+    "prettier-plugin-astro": "^1.1.2",
+    "satori": "^0.63.2",
+    "typescript": "^6.0.3",
+    "vitest": "^5.1.0",
+    "wrangler": "^4.164.0",
+    "yaml": "^2.9.1"
+  }
+}

@@ -1,0 +1,71 @@
+---
+title: "agent-sandbox-conformance-kit"
+repo: "https://github.com/rakshith-ponnappa/agent-sandbox-conformance-kit"
+tagline: "A black-box test suite that checks what an AI agent code sandbox actually does, not what its documentation says: lifecycle, filesystem, snapshots, egress policy, secret handling and quota edges."
+category: "ai"
+year: 2026
+status: "active"
+stack: ["Python 3.11+ (stdlib only)", "typing.Protocol adapters", "Docker CLI", "pytest", "GitHub Actions"]
+highlights:
+  - "Fifteen vendor-neutral checks, including cloud metadata reachability and DNS as an exfiltration side channel."
+  - "Any sandbox platform plugs in through two small Protocols; unsupported features become SKIP, never a false FAIL."
+  - "Guaranteed teardown: try/finally per check, an atexit registry for failed kills, and SIGTERM turned into a clean exit."
+  - "Markdown matrix plus JSON evidence, with secret canaries redacted before anything is written."
+metrics:
+  - { value: "33", label: "pytest tests (incl. parametrised cases)" }
+  - { value: "15", label: "conformance checks in the catalogue" }
+  - { value: "7", label: "check categories" }
+  - { value: "0", label: "runtime dependencies" }
+diagram: "/diagrams/agent-sandbox-conformance-kit.svg"
+diagramAlt: "The CLI drives a runner that selects checks from a catalogue by category and creates sandboxes through a provider adapter (fake, local Docker or a vendor). Checks probe the sandbox through run, write_file and similar calls. Teardown is guaranteed through try/finally and an atexit registry, and results are rendered as a Markdown matrix and a redacted JSON evidence file."
+order: 4
+---
+
+## The problem
+
+AI coding agents run code that nobody reviewed: model output, a fresh dependency, or something planted through prompt injection. The sandbox is the only boundary between that code and the network, the cloud control plane, injected secrets and the bill. One reachable egress path can exfiltrate source code. If the cloud instance metadata endpoint answers, instance credentials may be one HTTP request away. A sandbox that survives `kill()` keeps running and keeps costing money.
+
+Vendors document what their sandbox should do. I wanted a way to check, from the outside, what it actually does, so that providers can be compared, regressions caught, and vendors handed reproducible evidence.
+
+## How it works
+
+`python -m sandbox_conformance run --provider <name>` hands the runner a provider adapter and an optional list of categories. The runner creates sandboxes through the adapter, executes each selected check against them, and writes a Markdown matrix and a JSON evidence file. Exit code 0 means no `FAIL` or `ERROR`.
+
+The catalogue has 15 checks in seven categories:
+
+- **lifecycle:** create and run with exit-code propagation, `kill()` stops execution, no leftovers after teardown.
+- **filesystem:** UTF-8 round-trip, and binary safety across all 256 byte values, NUL and CR/LF.
+- **snapshot:** `restore()` rolls back modified files and removes files created after the snapshot.
+- **network:** deny-all blocks TCP to IPs and hostnames, an allowlist permits only listed hosts, the metadata endpoint is unreachable even under the most permissive policy, and DNS fails under deny-all.
+- **secrets:** environment secrets are absent from `ps` output and from platform logs.
+- **quota:** N parallel creates either succeed or are cleanly refused, and every one is torn down.
+- **optional:** PTY support and an offline `git clone`.
+
+An adapter implements two Protocols from `provider.py`: a provider with `create()` (and optionally `list_active()`), and a sandbox with `run`, `write_file`, `read_file`, `snapshot`, `restore`, `set_network_policy` and an idempotent `kill`. Two adapters ship with the kit. `fake` is in-memory and deterministic, with behaviour flags such as `metadata_reachable`, `env_in_ps` and `leak_on_kill` that simulate specific failures. `local-docker` drives the Docker CLI as a reference baseline.
+
+## Engineering decisions
+
+**Four result states, not two.** `PASS`, `FAIL`, `SKIP` and `ERROR` mean different things. A platform that does not offer snapshots raises `UnsupportedFeature`, and the check becomes `SKIP`. An adapter that throws unexpectedly, or a teardown that fails, becomes `ERROR`. Conflating those with `FAIL` would make the matrix useless for comparing vendors.
+
+**Probes print explicit verdicts.** Network probes are small Python scripts that print `CONNECTED`, `BLOCKED:<error>`, `RESOLVED` or `UNRESOLVED:<error>`. If the interpreter is missing, there is no verdict token and the result is `SKIP` (inconclusive) rather than a false `PASS`. Absence of a connection error is not evidence of a block.
+
+**Teardown is not optional.** Each check runs inside `try/finally` and kills every sandbox it created. Anything whose `kill()` fails stays in a registry drained again at interpreter exit, and the CLI converts `SIGTERM` into a normal exit so the same path runs. A conformance tool that leaks sandboxes would fail its own quota check.
+
+**Redaction at the source.** Secret canaries are replaced with `[REDACTED]` in all evidence, so a failing secrets check does not itself leak the secret into a report.
+
+**Zero runtime dependencies.** Pure standard library, so the kit can be dropped into any vendor's CI without a dependency review.
+
+**Thin, honest adapters.** The README asks adapter authors not to emulate policy client-side and to pass secrets the way production code would, never on a command line.
+
+## Results & evidence
+
+- **33 pytest tests** (25 test functions, one parametrised over nine failure modes). The parametrised test flips one fake behaviour at a time and asserts that exactly the matching check fails, which tests the checks themselves rather than just the plumbing. The Docker adapter's command construction is tested without a Docker engine.
+- Against the conformant fake: 13 PASS, 0 FAIL, 2 SKIP (PTY and git not offered).
+- Against the deliberately leaky fake: four FAILs with specific messages, for leftover sandboxes, reachable metadata, DNS resolving under deny-all and a secret visible in `ps`.
+- The `local-docker` baseline is not a hardened sandbox. On many cloud VMs the metadata endpoint is reachable from the bridge network, and the kit reports that correctly as a failure.
+
+## Limitations & next steps
+
+- **Early, v0.1.** Two reference adapters; no commercial sandbox adapters are bundled, and I publish no vendor results. The README sets out a responsible-disclosure process: report privately first, allow a reasonable fix window (90 days is the common default), and never probe beyond the black-box check.
+- **Egress coverage is TCP and DNS only.** IPv6, raw UDP, ICMP, HTTP(S) proxies and DNS-over-HTTPS are on the roadmap.
+- **No filesystem-escape or resource-exhaustion checks yet.** Host mounts, `/proc/1/root`, symlink races, and CPU, memory, disk and PID limits are next, along with cross-tenant snapshot isolation, timeout enforcement, and signed reproducible reports.

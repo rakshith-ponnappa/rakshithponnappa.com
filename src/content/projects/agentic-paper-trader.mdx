@@ -1,0 +1,71 @@
+---
+title: "agentic-paper-trader"
+repo: "https://github.com/rakshith-ponnappa/agentic-paper-trader"
+tagline: "A guard-railed multi-agent LLM paper trader: the model reasons, but votes, deterministic gates, hard caps and a kill switch sit between it and every order."
+category: "ai"
+year: 2026
+status: "active"
+stack: ["Python 3.11", "TradingAgents (LangGraph)", "OpenAI-compatible SDK", "pandas", "yfinance", "FinBERT (transformers)", "Alpaca paper API", "macOS launchd + Keychain", "pytest", "GitHub Actions"]
+highlights:
+  - "Three independent TradingAgents runs per ticker; the median rating wins, so one hallucinated Buy cannot trade."
+  - "Buys pass a deterministic gate: SPY above its 200-day average, no earnings within 4 days, top-half factor rank, FinBERT news sentiment."
+  - "The LLM proposes, code disposes: sizing, caps, stops and order payloads are plain, unit-tested Python."
+  - "A 15-minute stop-loss and take-profit monitor that has no LLM in its path at all."
+metrics:
+  - { value: "23", label: "offline pytest tests" }
+  - { value: "3", label: "votes per ticker before any order" }
+  - { value: "5", label: "independent checks in the buy gate" }
+  - { value: "0", label: "live-trading endpoints in the code" }
+diagram: "/diagrams/agentic-paper-trader.svg"
+diagramAlt: "Daily run: a kill-switch check, then a screen of a 20-ticker watchlist, three TradingAgents runs per pick, a majority vote and a deterministic buy gate. Passing picks become capped, idempotent limit orders on an Alpaca paper account, with state written to disk. A separate 15-minute monitor reads positions and prices and applies stop-losses and take-profits without any LLM."
+order: 2
+---
+
+## The problem
+
+LLM agents are persuasive and non-deterministic. Ask the same multi-agent framework about the same stock twice and you can get "Buy" and "Hold". That is fine for a research note and dangerous for anything with a side effect. I wanted a working, end-to-end example of the pattern I would want around any agent that acts in the world: let the model reason, then put voting, cheap independent checks, hard limits and an off switch between it and the action.
+
+Trading is a good test bed because the side effect is concrete and the feedback is measurable. I kept it strictly on paper: the code only talks to Alpaca's paper-trading API and has no live endpoint to switch to.
+
+## How it works
+
+The daily loop in `autotrader.py` runs in scheduled slots:
+
+1. **Kill switch.** If a `KILL` file exists in `$TA_HOME`, the trader and the monitor exit immediately.
+2. **Screen.** A 20-ticker watchlist is screened on price metrics and cooldowns, and at most three new picks go forward per day.
+3. **Analyse three times.** Each pick goes through [TradingAgents](https://github.com/TauricResearch/TradingAgents) with market, social, news and fundamentals analysts, three separate times, against any OpenAI-compatible endpoint.
+4. **Vote.** `majority()` takes the median of the three ratings on a Sell-to-Buy scale: two-of-three agreement wins and a three-way split resolves to the middle.
+5. **Gate.** `buy_gate()` returns a list of reasons to block: market below its 200-day average, earnings within four days, a factor percentile (12-1 momentum, 63-day volatility and quality from ROE and margin) below 50%, FinBERT news sentiment below -0.3, or an "avoid" from an LLM persona check that reads the stock through value, growth-at-a-reasonable-price and risk-manager lenses. An empty list means buy.
+6. **Plan and place.** Orders are sized against a capped total allocation: at most 10% per ticker, 25 orders per run, and no new buys once unrealised loss passes 15% of the allocation. Entries are limit orders at the analysed close plus 1% that expire at the close.
+7. **Monitor.** Every 15 minutes `monitor.py` checks positions against stored stops (8% below entry by default). A stop-out sells everything and starts a five-day cooldown; a 15% gain sells half, once.
+
+## Engineering decisions
+
+**Ensemble and gates instead of a better prompt.** Prompt tuning does not remove variance. Voting over independent runs reduces it, and deterministic checks catch the bad timing that LLM analysts often talk themselves past, such as a bear regime or earnings week.
+
+**The model never builds orders.** The LLM's output is a rating and, optionally, a stop level that `parse_stop()` extracts. Everything that touches money is ordinary Python covered by tests.
+
+**No LLM in the risk path.** The monitor depends only on prices and saved state, so a model outage cannot stop it from protecting positions.
+
+**Idempotency at the API boundary.** Every order carries `client_order_id = ta-<date>-<symbol>-<side>`. If Alpaca returns HTTP 422 for a duplicate, the trader fetches the existing order rather than placing a second one. A real run happens once per slot per day; reruns are dry.
+
+**Measure the guardrails.** A gate that looks sensible can still cost returns. `gate_backtest.py` replays the point-in-time gates (regime, earnings, price factors) over past decisions, and `rescore.py` re-scores decisions over 5, 10 and 20-day windows from prices alone. A scorecard feeds back into sizing: a rating with at least ten scored decisions and negative mean alpha against SPY gets half-size buys.
+
+**Secrets stay out of the repo.** Alpaca keys come from the environment or the macOS Keychain, and LLM settings from a shell file outside the repo.
+
+## Results & evidence
+
+- **23 pytest tests**, all offline, with Alpaca, yfinance and the LLM mocked or never called. They cover order planning, allocation caps, cooldowns, idempotent retries, stop and take-profit decisions, voting and the buy gate.
+- CI runs the suite on GitHub Actions.
+- Example launchd schedules cover three daily slots plus the 15-minute monitor, and every run writes a JSON record and an HTML report.
+
+I deliberately publish no P&L figures. The project is about the control pattern, not a strategy claim, and paper fills are not evidence of a real edge.
+
+## Limitations & next steps
+
+- **Not every gate can be backtested.** FinBERT and the persona check need a news archive, and the vote needs reruns, so `gate_backtest.py` only replays the price-based checks.
+- **The persona check is itself an LLM call.** It sits inside the gate as one veto among several, but it is not deterministic.
+- **Scheduling is macOS-specific** today (launchd and Keychain).
+- **Next:** containerise it and run on Cloud Run Jobs or a Kubernetes CronJob, add OpenTelemetry traces with cost per decision, build an evaluation view of vote agreement and gate hit rates, and put sentiment behind a hosted endpoint with the same interface.
+
+Paper trading only, and not financial advice.

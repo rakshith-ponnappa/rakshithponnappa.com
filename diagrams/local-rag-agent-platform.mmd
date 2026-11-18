@@ -1,0 +1,15 @@
+flowchart LR
+    subgraph OFF["Offline pipeline"]
+        D["sample_docs/*.md"] --> I["rag_ingest<br/>chunk 400 / overlap 80<br/>SHA-1 chunk IDs"]
+        I --> C["chunks.jsonl"]
+        C --> X["index_corpus<br/>Hashing or Ollama embedder"]
+        X --> V["index.json<br/>cosine vector store"]
+        L["retrieval_eval.json<br/>14 labelled queries"] --> E["eval_retrieval<br/>Hit@k, P@k, R@k, MRR"]
+        V --> E
+    end
+    subgraph API["FastAPI service"]
+        S["POST /search"] --> Q["embed query"]
+        CH["POST /chat"] --> O["Ollama /api/generate"]
+        H["GET /health"]
+    end
+    Q --> V

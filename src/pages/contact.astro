@@ -1,0 +1,352 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Icon from '../components/Icon.astro';
+import { profile } from '../data/profile';
+const siteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
+---
+
+<BaseLayout
+  title="Open a ticket"
+  description={`Contact ${profile.name} about platform engineering leadership, AI platform or forward-deployed engineering roles, or a consulting engagement.`}
+>
+  <section class="container-x wrap">
+    <div class="intro">
+      <p class="eyebrow">Contact</p>
+      <h1>Open a ticket.</h1>
+      <p class="lede">{profile.openTo}. The form lands straight in my inbox, or use whichever channel suits you.</p>
+
+      <ul class="channels">
+        <li>
+          <span class="k mono">email</span>
+          <a href={`mailto:${profile.email}`} class="v">{profile.email}</a>
+          <button class="icon-btn" type="button" data-copy={profile.email} aria-label="Copy email address">
+            <Icon name="copy" size={15} />
+          </button>
+        </li>
+        <li>
+          <span class="k mono">phone</span>
+          <a href={profile.phoneHref} class="v">{profile.phone}</a>
+          <button class="icon-btn" type="button" data-copy={profile.phone} aria-label="Copy phone number">
+            <Icon name="copy" size={15} />
+          </button>
+        </li>
+        <li>
+          <span class="k mono">linkedin</span>
+          <a href={profile.linkedin} class="v" rel="noopener">rakshith-siragaje-ponnappa <Icon name="arrow-up-right" size={13} /></a>
+        </li>
+        <li>
+          <span class="k mono">github</span>
+          <a href={profile.github} class="v" rel="noopener">rakshith-ponnappa <Icon name="arrow-up-right" size={13} /></a>
+        </li>
+        <li>
+          <span class="k mono">based in</span>
+          <span class="v">{profile.location} · <time data-clock data-tz="Asia/Kolkata">--:--</time> IST</span>
+        </li>
+      </ul>
+    </div>
+
+    <form class="ticket card" data-contact data-sitekey={siteKey} novalidate>
+      <header class="mono">
+        <span><span class="dot" data-pulse></span> new ticket</span>
+        <span>priority: <strong>p1</strong></span>
+      </header>
+      <div class="field">
+        <label for="c-topic">Type</label>
+        <select id="c-topic" name="topic">
+          <option value="Hiring">Hiring: a full-time role</option>
+          <option value="Consulting">Consulting engagement</option>
+          <option value="Collaboration">Speaking or collaboration</option>
+          <option value="Other">Something else</option>
+        </select>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label for="c-name">Your name</label>
+          <input id="c-name" name="name" required maxlength="80" autocomplete="name" />
+        </div>
+        <div class="field">
+          <label for="c-email">Email</label>
+          <input id="c-email" name="email" type="email" required maxlength="200" autocomplete="email" />
+        </div>
+      </div>
+      <div class="field">
+        <label for="c-msg">What’s the problem to solve?</label>
+        <textarea id="c-msg" name="message" required minlength="10" maxlength="2000" rows="6"></textarea>
+        <span class="count mono" data-count>0 / 2000</span>
+      </div>
+      {siteKey && <div class="ts" data-turnstile />}
+      <div class="foot">
+        <p class="err" data-err role="alert"></p>
+        <button class="btn btn-primary" type="submit">Submit ticket <Icon name="send" size={15} /></button>
+      </div>
+      <div class="done" data-done hidden tabindex="-1">
+        <p class="mono ok"><Icon name="check" size={16} /> Ticket received</p>
+        <p>Thanks. I’ll reply to the email address you gave.</p>
+      </div>
+      <div class="handoff" data-handoff hidden tabindex="-1" role="status">
+        <p class="mono ok"><Icon name="mail" size={16} /> Opening your email app…</p>
+        <p>
+          Your message is drafted in a new email. If nothing opened, send it to
+          <a class="link" href={`mailto:${profile.email}`}>{profile.email}</a> or call <a class="link" href={profile.phoneHref}>{profile.phone}</a>.
+        </p>
+      </div>
+    </form>
+  </section>
+</BaseLayout>
+
+<style>
+  .wrap {
+    padding-top: clamp(3rem, 7vw, 6rem);
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+    gap: clamp(2rem, 6vw, 6rem);
+    align-items: start;
+  }
+  h1 {
+    margin-top: 1rem;
+    font-size: var(--step-5);
+    letter-spacing: -0.05em;
+    line-height: 0.95;
+  }
+  .lede {
+    margin-top: 1.5rem;
+  }
+  .channels {
+    margin-top: 2.5rem;
+    border-top: 1px solid var(--line-soft);
+  }
+  .channels li {
+    display: grid;
+    grid-template-columns: 6rem 1fr auto;
+    align-items: center;
+    gap: 1rem;
+    min-height: 3.5rem;
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .k {
+    font-size: 0.72rem;
+    color: var(--fg-faint);
+  }
+  .v {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-weight: 500;
+    overflow-wrap: anywhere;
+  }
+  a.v:hover {
+    color: var(--signal);
+  }
+  .icon-btn {
+    display: grid;
+    place-items: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 999px;
+    border: 1px solid var(--line-soft);
+    color: var(--fg-muted);
+    background: transparent;
+    cursor: pointer;
+  }
+  .icon-btn:hover,
+  .icon-btn[data-copied] {
+    color: var(--signal);
+    border-color: var(--signal);
+  }
+  .ticket {
+    padding: clamp(1.25rem, 3vw, 2rem);
+    display: grid;
+    gap: 1.2rem;
+  }
+  .ticket header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.72rem;
+    color: var(--fg-faint);
+    padding-bottom: 1rem;
+    border-bottom: 1px dashed var(--line);
+  }
+  .ticket header span:first-child {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--fg-muted);
+  }
+  .ticket header strong {
+    color: var(--amber);
+    font-weight: 500;
+  }
+  .row2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+  .field {
+    position: relative;
+    display: grid;
+    gap: 0.45rem;
+  }
+  label {
+    font-size: 0.85rem;
+    color: var(--fg-muted);
+  }
+  input,
+  select,
+  textarea {
+    width: 100%;
+    padding: 0.75rem 0.9rem;
+    border-radius: 10px;
+    border: 1px solid var(--line-strong);
+    background: var(--bg-sunken);
+    color: var(--fg);
+    font: inherit;
+    font-size: 0.98rem;
+    transition:
+      border-color var(--t-2),
+      box-shadow var(--t-2);
+  }
+  textarea {
+    resize: vertical;
+    min-height: 9rem;
+  }
+  input:focus,
+  select:focus,
+  textarea:focus {
+    outline: none;
+    border-color: var(--signal);
+    box-shadow: 0 0 0 4px var(--signal-soft);
+  }
+  input:user-invalid,
+  textarea:user-invalid {
+    border-color: var(--red);
+  }
+  .count {
+    position: absolute;
+    right: 0.75rem;
+    bottom: 0.6rem;
+    font-size: 0.68rem;
+    color: var(--fg-faint);
+  }
+  .foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+  .err {
+    color: var(--red);
+    font-size: 0.88rem;
+  }
+  .handoff,
+  .done {
+    padding: 1.25rem;
+    border-radius: 12px;
+    border: 1px solid color-mix(in oklch, var(--signal) 40%, var(--line));
+    background: var(--signal-soft);
+  }
+  .ok {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--signal);
+    margin-bottom: 0.4rem;
+  }
+  @media (max-width: 900px) {
+    .wrap {
+      grid-template-columns: 1fr;
+    }
+  }
+  @media (max-width: 520px) {
+    .row2 {
+      grid-template-columns: 1fr;
+    }
+    .channels li {
+      grid-template-columns: 4.5rem 1fr auto;
+    }
+  }
+</style>
+
+<script>
+  type TurnstileApi = { render: (el: HTMLElement, opts: Record<string, unknown>) => string; reset: (id?: string) => void };
+  const form = document.querySelector<HTMLFormElement>('[data-contact]')!;
+  const err = form.querySelector<HTMLElement>('[data-err]')!;
+  const done = form.querySelector<HTMLElement>('[data-done]')!;
+  const msg = form.querySelector<HTMLTextAreaElement>('textarea')!;
+  const count = form.querySelector<HTMLElement>('[data-count]')!;
+  const siteKey = form.dataset.sitekey;
+  let token = '';
+  let widget: string | undefined;
+
+  // ?topic=hiring|consulting|collaboration|other preselects the ticket type.
+  const topic = (new URLSearchParams(location.search).get('topic') ?? '').toLowerCase();
+  const select = form.querySelector<HTMLSelectElement>('select')!;
+  const match = [...select.options].find((o) => o.value.toLowerCase() === topic);
+  if (match) select.value = match.value;
+  const handoff = form.querySelector<HTMLElement>('[data-handoff]')!;
+
+  msg.addEventListener('input', () => (count.textContent = `${msg.value.length} / 2000`));
+
+  if (siteKey) {
+    const s = document.createElement('script');
+    s.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+    s.async = true;
+    s.onload = () => {
+      const ts = (window as unknown as { turnstile: TurnstileApi }).turnstile;
+      widget = ts.render(form.querySelector<HTMLElement>('[data-turnstile]')!, {
+        sitekey: siteKey,
+        theme: document.documentElement.dataset.theme === 'light' ? 'light' : 'dark',
+        callback: (t: string) => (token = t),
+        'expired-callback': () => (token = ''),
+        'error-callback': () => (token = ''),
+      });
+    };
+    document.head.append(s);
+  }
+
+  function mailto(d: Record<string, string>) {
+    const subject = `[${d.topic}] from ${d.name}`;
+    handoff.hidden = false;
+    handoff.focus();
+    location.href = `mailto:${form.closest('section')!.querySelector<HTMLAnchorElement>('a[href^="mailto:"]')!.href.slice(7)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(`${d.message}\n\n— ${d.name} <${d.email}>`)}`;
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    err.textContent = '';
+    if (!form.checkValidity()) {
+      form.reportValidity();
+      return;
+    }
+    const d = Object.fromEntries(new FormData(form)) as Record<string, string>;
+    const btn = form.querySelector<HTMLButtonElement>('button[type=submit]')!;
+    btn.disabled = true;
+    try {
+      const r = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ name: d.name, email: d.email, topic: d.topic, message: d.message, turnstileToken: token }),
+      });
+      const body = (r.headers.get('content-type') ?? '').includes('json') ? await r.json() : null;
+      if (r.ok && body?.ok) {
+        form.querySelectorAll('.field, .row2, .foot, .ts').forEach((x) => ((x as HTMLElement).hidden = true));
+        done.hidden = false;
+        done.focus();
+        return;
+      }
+      if (r.status === 429) err.textContent = 'Too many tickets from your network. Please try again in a minute.';
+      else if (body?.error === 'verification failed') err.textContent = 'Verification expired. Please submit again.';
+      else if (body?.fallback === 'mailto' || body?.error === 'verification required' || [404, 405].includes(r.status)) mailto(d);
+      else err.textContent = body?.error ?? 'Something went wrong. Please email me directly.';
+      if (err.textContent) btn.focus();
+    } catch {
+      mailto(d);
+    } finally {
+      btn.disabled = false;
+      if (widget) {
+        token = '';
+        (window as unknown as { turnstile: TurnstileApi }).turnstile.reset(widget);
+      }
+    }
+  });
+</script>

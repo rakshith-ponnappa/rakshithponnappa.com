@@ -1,0 +1,444 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Icon from '../components/Icon.astro';
+import { profile, experience, certifications, education, courses, skills, fmtMonth, highlights } from '../data/profile';
+
+const projects = (await getCollection('projects')).sort((a, b) => a.data.order - b.data.order).slice(0, 6);
+// Current role first, then by most recent end date.
+// Most recent first; among current roles the full-time one leads, then contracts.
+const roles = [...experience].sort((a, b) => (b.end ?? '9999').localeCompare(a.end ?? '9999') || Number(a.kind !== 'full-time') - Number(b.kind !== 'full-time') || b.start.localeCompare(a.start));
+// First clause of a tagline, for the one-line résumé entry.
+const short = (t: string) => t.split(/(?<=\.)\s|:\s/)[0].replace(/[.,;]?$/, '.');
+const host = (u: string) => u.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '');
+const impact = [
+  'State Street: lead architect for an NTT data-centre exit to Azure; Terraform modules from scratch, 500+ VMs with SQL MI, Oracle and cross-region DR; 3 cutovers, 10+ apps live.',
+  'Turing (contract): built the sandboxed desktop image computer-use AI agents train and are evaluated in; ported the eval harness to a new provider and security-tested it.',
+  'State Street: split 35,000 Terraform resources into per-app TFE workspaces and Harness pipelines with zero reboots; golden-image VM factory cut VM builds from 30 to 2–3 minutes.',
+  'PlanHub (freelance SRE & platform engineer): AWS on Terraform, zero-downtime blue/green releases across 5 service tiers, HIPAA/GDPR-aligned controls.',
+  'Five Below: Azure landing-zone audit (WAF 8.0 static / 6.6 runtime); remediation roadmap cut critical findings by 75% and identified $47K a year in savings.',
+  'Four years on-site in Dubai and Oman delivering Kubernetes and GitLab platforms for telecom, banking, government and energy.',
+];
+---
+
+<BaseLayout
+  title="Résumé"
+  description={`Résumé of ${profile.fullName}, ${profile.headline}. Download the PDF or read it here.`}
+>
+  <div class="container-x tools no-print">
+    <p class="eyebrow">Résumé · updated {new Date().toLocaleString('en-GB', { month: 'long', year: 'numeric' })}</p>
+    <div class="btns">
+      <a class="btn btn-primary" href={profile.resumePdf} download><Icon name="download" /> Download PDF</a>
+      <a class="btn" href="/resume.json"><Icon name="file" /> JSON Resume</a>
+    </div>
+  </div>
+
+  <article class="container-x">
+    <div class="paper">
+      <header class="r-head">
+        <div>
+          <h1>{profile.fullName}</h1>
+          <p class="r-role">{profile.headline} · {highlights[0].value} years · {profile.tagline}</p>
+          <p class="r-avail">Open to: {profile.openTo}</p>
+        </div>
+        <ul class="r-contact">
+          <li><a href={`mailto:${profile.email}`}>{profile.email}</a></li>
+          <li><a href={profile.phoneHref}>{profile.phone}</a></li>
+          <li>{profile.location}</li>
+          <li><a href={profile.site}>{host(profile.site)}</a></li>
+          <li><a href={profile.linkedin}>linkedin.com/in/rakshith-siragaje-ponnappa</a></li>
+          <li><a href={profile.github}>{host(profile.github)}</a></li>
+        </ul>
+      </header>
+
+      <section>
+        <h2>Summary</h2>
+        <p>{profile.pitch}</p>
+      </section>
+
+      <section>
+        <h2>Selected impact</h2>
+        <ul class="bul">{impact.map((i) => <li>{i}</li>)}</ul>
+      </section>
+
+      <section>
+        <h2>Experience</h2>
+        {
+          roles.map((r) => (
+            <div class="role">
+              <div class="role-head">
+                <h3>
+                  {r.title} <span class="at">· {r.company}</span>
+                </h3>
+                <span class="when">
+                  {fmtMonth(r.start)} – {fmtMonth(r.end)}
+                </span>
+              </div>
+              <p class="loc">{r.location}</p>
+              <ul class="bul">
+                {r.bullets.map((b) => (
+                  <li>{b}</li>
+                ))}
+              </ul>
+            </div>
+          ))
+        }
+      </section>
+
+      <section class="brk">
+        <h2>Open source</h2>
+        <ul class="proj">
+          {
+            projects.map((p) => (
+              <li>
+                <strong>{p.data.title}</strong>: {short(p.data.tagline)}{' '}
+                <a href={p.data.repo}>{host(p.data.repo)}</a>
+              </li>
+            ))
+          }
+        </ul>
+      </section>
+
+      <section>
+        <h2>Skills</h2>
+        <dl class="skills">
+          {
+            skills.map((s) => (
+              <div>
+                <dt>{s.area}</dt>
+                <dd>{s.items.join(' · ')}</dd>
+              </div>
+            ))
+          }
+        </dl>
+      </section>
+
+      <div class="two">
+        <section>
+          <h2>Certifications</h2>
+          <ul class="certs">
+            {
+              certifications.map((c) => (
+                <li>
+                  {c.issuer} {c.name}
+                  {c.code && <span class="code"> ({c.code})</span>}
+                </li>
+              ))
+            }
+          </ul>
+        </section>
+        <section>
+          <h2>Education</h2>
+          <ul class="edu">
+            {
+              education.map((e) => (
+                <li>
+                  <strong>{e.degree}</strong>
+                  <span>
+                    {e.school} · {e.year}
+                  </span>
+                </li>
+              ))
+            }
+            {
+              courses.map((c) => (
+                <li>
+                  <strong>{c.name} (additional course)</strong>
+                  <span>
+                    {c.provider} · {c.year}
+                  </span>
+                </li>
+              ))
+            }
+          </ul>
+        </section>
+      </div>
+    </div>
+  </article>
+</BaseLayout>
+
+<style>
+  .tools {
+    padding-top: clamp(2.5rem, 5vw, 4rem);
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  .btns {
+    display: flex;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+  }
+  .paper {
+    max-width: 58rem;
+    margin-inline: auto;
+    padding: clamp(1.5rem, 5vw, 3.5rem);
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius);
+    background: var(--bg-raised);
+    box-shadow: var(--shadow);
+    font-size: 0.95rem;
+    line-height: 1.55;
+  }
+  .r-head {
+    display: grid;
+    gap: 1rem;
+    padding-bottom: 1.25rem;
+    border-bottom: 2px solid var(--fg);
+  }
+  h1 {
+    font-size: var(--step-3);
+    letter-spacing: -0.035em;
+  }
+  .r-role {
+    margin-top: 0.35rem;
+    color: var(--fg-muted);
+    font-weight: 500;
+  }
+  .r-avail {
+    margin-top: 0.25rem;
+    font-size: 0.85rem;
+    color: var(--fg-muted);
+  }
+  .r-contact {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.2rem 1.1rem;
+    font-size: 0.85rem;
+    color: var(--fg-muted);
+  }
+  .r-contact a:hover {
+    color: var(--signal);
+  }
+  section {
+    margin-top: 1.5rem;
+  }
+  h2 {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--signal);
+    padding-bottom: 0.4rem;
+    margin-bottom: 0.75rem;
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .role + .role {
+    margin-top: 1.1rem;
+  }
+  .role-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: baseline;
+  }
+  h3 {
+    font-size: 1rem;
+    letter-spacing: -0.01em;
+    line-height: 1.35;
+  }
+  .at {
+    font-weight: 500;
+    color: var(--fg-muted);
+  }
+  .when {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--fg-faint);
+    white-space: nowrap;
+  }
+  .loc {
+    font-size: 0.82rem;
+    color: var(--fg-faint);
+  }
+  .bul {
+    margin-top: 0.4rem;
+    display: grid;
+    gap: 0.25rem;
+  }
+  .bul li,
+  .proj li {
+    position: relative;
+    padding-left: 0.95rem;
+  }
+  .bul li::before,
+  .proj li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.72em;
+    width: 0.45rem;
+    height: 1px;
+    background: var(--fg-faint);
+  }
+  .proj {
+    display: grid;
+    gap: 0.3rem;
+  }
+  .proj a,
+  .bul a {
+    font-family: var(--font-mono);
+    font-size: 0.78em;
+    color: var(--fg-faint);
+  }
+  .skills {
+    display: grid;
+    gap: 0.25rem;
+  }
+  .skills div {
+    display: grid;
+    grid-template-columns: 10.5rem 1fr;
+    gap: 0.75rem;
+  }
+  .skills dt {
+    font-weight: 600;
+  }
+  .skills dd {
+    color: var(--fg-muted);
+  }
+  .two {
+    display: grid;
+    grid-template-columns: 1.3fr 1fr;
+    gap: 2rem;
+  }
+  .certs {
+    columns: 1;
+    font-size: 0.88rem;
+    display: grid;
+    gap: 0.15rem;
+  }
+  .code {
+    color: var(--fg-faint);
+  }
+  .edu {
+    display: grid;
+    gap: 0.6rem;
+    font-size: 0.9rem;
+  }
+  .edu span {
+    display: block;
+    color: var(--fg-muted);
+  }
+  @media (max-width: 720px) {
+    .two,
+    .skills div {
+      grid-template-columns: 1fr;
+      gap: 0.1rem;
+    }
+    .role-head {
+      flex-direction: column;
+      gap: 0;
+    }
+  }
+
+  @media print {
+    @page {
+      size: A4;
+      margin: 10mm 12mm;
+    }
+    :global(:root) {
+      --bg: #fff !important;
+      --bg-raised: #fff !important;
+      --fg: #111827 !important;
+      --fg-muted: #374151 !important;
+      --fg-faint: #6b7280 !important;
+      --line-soft: #e5e7eb !important;
+      --signal: #166534 !important;
+    }
+    :global(.site-header),
+    :global(.site-footer),
+    :global(.skip-link),
+    :global(dialog),
+    :global(.toasts),
+    .no-print {
+      display: none !important;
+    }
+    :global(html),
+    :global(body) {
+      background: #fff !important;
+    }
+    :global(.container-x) {
+      padding: 0 !important;
+      max-width: none !important;
+    }
+    .paper {
+      max-width: none;
+      padding: 0;
+      border: 0;
+      box-shadow: none;
+      font-size: 9pt;
+      line-height: 1.42;
+    }
+    h1 {
+      font-size: 21pt;
+    }
+    .r-contact {
+      font-size: 8.4pt;
+    }
+    section {
+      margin-top: 3.4mm;
+    }
+    h2 {
+      font-size: 7.6pt;
+      margin-bottom: 1.8mm;
+      padding-bottom: 1mm;
+    }
+    h3 {
+      font-size: 9.6pt;
+    }
+    .when,
+    .loc {
+      font-size: 7.8pt;
+    }
+    .role + .role {
+      margin-top: 2.6mm;
+    }
+    /* Keep the PDF to two A4 pages: the full project list stays on the web version. */
+    /* Top three bullets per role in print (two for the three oldest roles); the web version keeps every bullet. */
+    .role .bul li:nth-child(n + 4),
+    .role:nth-last-of-type(-n + 3) .bul li:nth-child(n + 3) {
+      display: none;
+    }
+    .proj li:nth-child(n + 3) {
+      display: none;
+    }
+    /* Roles may split between bullets so a page doesn't end with a gap; a heading always stays with its first bullet. */
+    .proj li,
+    .skills div,
+    .edu li,
+    .bul li {
+      break-inside: avoid;
+    }
+    .role-head,
+    .loc {
+      break-after: avoid;
+    }
+    .skills div {
+      grid-template-columns: 34mm 1fr;
+    }
+    .certs,
+    .edu {
+      font-size: 8.4pt;
+    }
+    .two {
+      grid-template-columns: 1.75fr 1fr;
+      gap: 6mm;
+    }
+    .certs {
+      display: block;
+      columns: 2;
+      column-gap: 5mm;
+    }
+    .certs li {
+      break-inside: avoid;
+      margin-bottom: 0.2mm;
+    }
+    a {
+      color: inherit !important;
+    }
+  }
+</style>

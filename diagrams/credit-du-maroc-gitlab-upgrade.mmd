@@ -1,0 +1,16 @@
+flowchart TD
+    G{"Previous hop's<br/>background migrations at zero?"} -->|"no"| W["Wait<br/>no new hop"]
+    W --> G
+    G -->|"yes"| B["Pre-checks and baseline<br/>versions, counts, health"]
+    B --> CI["Block runner job requests<br/>nginx returns 503"]
+    CI --> S["Stop GitLab<br/>cold rsync + PostgreSQL backup"]
+    subgraph COPY["Working copy, live data untouched"]
+        U["Start next pinned version<br/>on the copy"]
+        V{"Validate<br/>checks, migrations,<br/>before vs after data diff"}
+    end
+    S --> U --> V
+    V -->|"fail"| D["Discard copy<br/>restart previous version"]
+    V -->|"pass"| P["Promote copy to live<br/>old data kept as archive"]
+    P --> C["Unblock CI<br/>test pipeline, hop report"]
+    D --> C
+    C -->|"next hop"| G

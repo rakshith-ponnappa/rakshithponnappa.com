@@ -1,0 +1,12 @@
+flowchart LR
+    U["fde CLI<br/>argparse"] --> L["learning.py<br/>plan, pace, streaks, skills"]
+    U --> J["jobs.py<br/>fetch, tier, region,<br/>sponsorship, pipeline"]
+    U --> R["report.py<br/>weekly Markdown report"]
+    C1["curriculum.toml<br/>26-week plan"] --> L
+    C2["config.toml<br/>87 companies, regions,<br/>tiers, keywords"] --> J
+    J -->|"concurrent HTTPS<br/>stdlib urllib"| GH["Greenhouse API"]
+    J --> LV["Lever API"]
+    J --> AS["Ashby API"]
+    L --> DB["SQLite<br/>data/fde.db"]
+    J --> DB
+    R --> DB

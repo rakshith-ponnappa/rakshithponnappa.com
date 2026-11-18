@@ -1,0 +1,539 @@
+---
+import Icon from './Icon.astro';
+
+interface Props {
+  large?: boolean;
+  autofocus?: boolean;
+}
+const { large = false, autofocus = false } = Astro.props;
+const suggestions = [
+  'What did he build for State Street?',
+  'Has he taken LLM systems to production?',
+  'How deep is his Kubernetes experience?',
+  'Which clouds has he worked on?',
+  'What is local-rag-agent-platform?',
+];
+---
+
+<div class:list={['ask', { large }]} data-ask>
+  <form class="bar" data-ask-form>
+    <label for="ask-q" class="sr-only">Ask a question about Rakshith</label>
+    <span class="prompt mono" aria-hidden="true">$ ask</span>
+    <input
+      id="ask-q"
+      name="q"
+      type="text"
+      maxlength="400"
+      minlength="3"
+      required
+      autocomplete="off"
+      placeholder="e.g. What did he do at Crédit du Maroc?"
+      autofocus={autofocus}
+    />
+    <button class="btn btn-primary send" type="submit" aria-label="Ask">
+      <Icon name="send" size={16} />
+    </button>
+  </form>
+  <ul class="sugg" aria-label="Suggested questions">
+    {
+      suggestions.map((s) => (
+        <li>
+          <button type="button" class="chip" data-ask-suggest>
+            {s}
+          </button>
+        </li>
+      ))
+    }
+  </ul>
+  <div class="out" data-ask-out aria-live="polite" hidden></div>
+  <p class="fine mono">
+    Grounded only in this site’s public content · cites sources · refuses the rest · <a href="/evals/" class="link">see evals</a>
+  </p>
+</div>
+
+<style>
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  .ask {
+    max-width: 52rem;
+  }
+  .bar {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.45rem 0.45rem 0.45rem 1.1rem;
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    background: var(--bg-raised);
+    box-shadow: var(--shadow);
+    transition:
+      border-color var(--t-2),
+      box-shadow var(--t-3);
+  }
+  .bar:focus-within {
+    border-color: color-mix(in oklch, var(--signal) 60%, var(--line));
+    box-shadow:
+      0 0 0 4px var(--signal-soft),
+      var(--shadow);
+  }
+  .prompt {
+    font-size: 0.8rem;
+    color: var(--signal);
+    flex: none;
+  }
+  input {
+    flex: 1;
+    min-width: 0;
+    background: transparent;
+    border: 0;
+    outline: none;
+    font-size: 1.02rem;
+    color: var(--fg);
+    padding-block: 0.6rem;
+  }
+  input::placeholder {
+    color: var(--fg-faint);
+  }
+  .send {
+    width: 2.75rem;
+    padding: 0;
+    justify-content: center;
+    flex: none;
+  }
+  .large .bar {
+    padding-block: 0.6rem;
+  }
+  .large input {
+    font-size: 1.15rem;
+  }
+  .sugg {
+    margin-top: 1rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+  }
+  .sugg .chip {
+    white-space: normal;
+    text-align: left;
+    line-height: 1.35;
+    cursor: pointer;
+    font-size: 0.75rem;
+    padding: 0.5rem 0.7rem;
+    transition:
+      color var(--t-2),
+      border-color var(--t-2);
+  }
+  .sugg .chip:hover {
+    color: var(--fg);
+    border-color: var(--line);
+  }
+  .out {
+    margin-top: 1.5rem;
+    padding: 1.4rem 1.5rem;
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius);
+    background: var(--bg-raised);
+  }
+  .out :global(.meta) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1rem;
+    align-items: center;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--fg-faint);
+    margin-bottom: 0.9rem;
+  }
+  .out :global(.q) {
+    color: var(--fg-muted);
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .out :global(.lat) {
+    margin-left: auto;
+  }
+  .out :global(.answer),
+  .out :global(.lead) {
+    font-size: 1.05rem;
+    line-height: 1.7;
+    color: var(--fg);
+  }
+  .out :global(.lead) {
+    color: var(--fg-muted);
+    font-size: 0.95rem;
+  }
+  .out :global(.answer sup a) {
+    font-family: var(--font-mono);
+    font-size: 0.68em;
+    color: var(--signal);
+    padding: 0 0.2em;
+    border-radius: 4px;
+    background: var(--signal-soft);
+    margin-left: 0.1em;
+  }
+  /* Extractive (no-AI) answer: numbered passages with their source inline. */
+  .out :global(.passages) {
+    margin-top: 0.9rem;
+    display: grid;
+    gap: 0.9rem;
+  }
+  .out :global(.passages > li) {
+    display: grid;
+    grid-template-columns: 1.6rem minmax(0, 1fr);
+    gap: 0.75rem;
+    padding: 0.95rem 1rem;
+    border: 1px solid var(--line-soft);
+    border-radius: 12px;
+    background: var(--bg-sunken);
+  }
+  .out :global(.n) {
+    display: grid;
+    place-items: center;
+    width: 1.6rem;
+    height: 1.6rem;
+    border-radius: 6px;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--signal);
+    background: var(--signal-soft);
+    flex: none;
+  }
+  .out :global(.ptext) {
+    font-size: 0.98rem;
+    line-height: 1.65;
+    color: var(--fg);
+  }
+  .out :global(.src) {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    min-width: 0;
+    color: var(--fg-muted);
+    font-size: 0.82rem;
+    transition: color var(--t-2);
+  }
+  .out :global(.pbody .src) {
+    margin-top: 0.55rem;
+  }
+  .out :global(.src:hover) {
+    color: var(--fg);
+  }
+  .out :global(.src .lbl) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.15rem 0.5rem;
+    min-width: 0;
+  }
+  .out :global(.src .t) {
+    font-weight: 550;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+  .out :global(.src .s) {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--fg-faint);
+  }
+  .out :global(.src .go) {
+    margin-left: auto;
+    color: var(--fg-faint);
+    transition: transform var(--t-2) var(--ease-out);
+  }
+  .out :global(.src:hover .go) {
+    color: var(--signal);
+    transform: translateX(2px);
+  }
+  .out :global(.src-head) {
+    margin-top: 1.25rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--line-soft);
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--fg-faint);
+  }
+  .out :global(.sources) {
+    margin-top: 0.6rem;
+    display: grid;
+    gap: 0.35rem;
+  }
+  .out :global(.sources .src) {
+    padding: 0.5rem 0.6rem;
+    margin-inline: -0.6rem;
+    border-radius: 8px;
+  }
+  .out :global(.sources .src:hover) {
+    background: var(--bg-sunken);
+  }
+  @media (max-width: 520px) {
+    .out {
+      padding: 1rem;
+    }
+    .out :global(.passages > li) {
+      grid-template-columns: 1fr;
+      gap: 0.5rem;
+      padding: 0.8rem 0.85rem;
+    }
+    .out :global(.passages .n) {
+      width: 1.35rem;
+      height: 1.35rem;
+    }
+    .out :global(.lat) {
+      margin-left: 0;
+    }
+  }
+  .out :global(.actions) {
+    margin-top: 1rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .out :global(.thinking) {
+    display: flex;
+    gap: 0.6rem;
+    align-items: center;
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    color: var(--fg-faint);
+  }
+  .out :global(.thinking i) {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--signal);
+    animation: blink 1s steps(2) infinite;
+  }
+  @keyframes blink {
+    50% {
+      opacity: 0.2;
+    }
+  }
+  .fine {
+    margin-top: 1rem;
+    font-size: 0.7rem;
+    color: var(--fg-faint);
+  }
+</style>
+
+<script>
+  type Cite = { id: string; title: string; url: string };
+  type AskResult = {
+    answer: string;
+    citations: Cite[];
+    mode: 'llm' | 'retrieval' | 'refused';
+    latencyMs?: number;
+    excerpts?: string[];
+    offline?: boolean;
+  };
+  type Doc = { id: string; title: string; url: string; section?: string; text: string };
+
+  type Passage = { id: string; title: string; section?: string; url: string; text: string };
+  let local: Promise<{ ask: (q: string) => Passage[] | null }> | null = null;
+
+  // Fallback when /api/ask is unavailable (static preview, quota or network): the same BM25 + extractive answer the Worker uses.
+  function localIndex() {
+    local ??= (async () => {
+      const [{ buildIndex, search, isAnswerable }, { extractive }, corpus] = await Promise.all([
+        import('../lib/retrieval'),
+        import('../lib/answer'),
+        fetch('/corpus.json').then((r) => r.json() as Promise<{ docs: Doc[] }>),
+      ]);
+      const index = buildIndex(corpus.docs);
+      return {
+        ask: (q: string) => {
+          const hits = search(index, q, 6);
+          return isAnswerable(index, q, hits) ? extractive(q, hits, 3, index) : null;
+        },
+      };
+    })();
+    return local;
+  }
+
+  async function askLocal(q: string): Promise<AskResult> {
+    const t = performance.now();
+    const { ask } = await localIndex();
+    const passages = ask(q);
+    const latencyMs = Math.round(performance.now() - t);
+    if (!passages)
+      return {
+        answer: "That isn't covered in his public material. Try the résumé, or open a ticket and ask him directly.",
+        citations: [
+          { id: 'resume', title: 'Résumé', url: '/resume/' },
+          { id: 'contact', title: 'Open a ticket', url: '/contact/' },
+        ],
+        mode: 'refused',
+        latencyMs,
+        offline: true,
+      };
+    return {
+      answer: 'Here’s what his public material says:',
+      excerpts: passages.map((p) => p.text),
+      citations: passages.map((p) => ({ id: p.id, title: p.title + (p.section ? ` · ${p.section}` : ''), url: p.url })),
+      mode: 'retrieval',
+      latencyMs,
+      offline: true,
+    };
+  }
+
+  async function askApi(q: string): Promise<AskResult> {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 20_000);
+    try {
+      const r = await fetch('/api/ask', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ question: q }),
+        signal: ctrl.signal,
+      });
+      if (r.status === 429) {
+        const retry = r.headers.get('retry-after') ?? '60';
+        return { answer: `Rate limit reached. Try again in ${retry}s.`, citations: [], mode: 'refused' };
+      }
+      if (!r.ok || !(r.headers.get('content-type') ?? '').includes('json')) throw new Error(String(r.status));
+      return (await r.json()) as AskResult;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: string) {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  }
+
+  const safeHref = (a: HTMLAnchorElement, url: string) => {
+    if (/^\/(?!\/)/.test(url)) a.href = url;
+  };
+  // "Title · Section" → [title, section]
+  const splitTitle = (t: string) => {
+    const i = t.lastIndexOf(' · ');
+    return i > 0 ? [t.slice(0, i), t.slice(i + 3)] : [t, ''];
+  };
+  function sourceLink(c: Cite, n?: number) {
+    const a = el('a', 'src');
+    safeHref(a, c.url);
+    const [title, section] = splitTitle(c.title);
+    if (n != null) a.append(el('span', 'n', String(n)));
+    const label = el('span', 'lbl');
+    label.append(el('span', 't', title));
+    if (section) label.append(el('span', 's', section));
+    a.append(label, el('span', 'go', '→'));
+    return a;
+  }
+
+  function render(out: HTMLElement, q: string, res: AskResult) {
+    out.replaceChildren();
+    const meta = el('div', 'meta');
+    const label = { llm: 'AI answer · cited', retrieval: 'From the site · no AI', refused: 'Not covered' }[res.mode];
+    const badge = el('span', 'chip', label);
+    badge.dataset.tone = res.mode === 'llm' ? 'signal' : res.mode === 'retrieval' ? 'azure' : 'amber';
+    meta.append(badge, el('span', 'q', `“${q}”`));
+    if (res.latencyMs != null) meta.append(el('span', 'lat', `${res.latencyMs} ms${res.offline ? ' · in-browser' : ''}`));
+    out.append(meta);
+
+    if (res.mode === 'retrieval' && res.excerpts?.length) {
+      out.append(el('p', 'lead', res.answer));
+      const list = el('ol', 'passages');
+      res.excerpts.forEach((text, i) => {
+        const c = res.citations[i];
+        const li = el('li');
+        li.append(el('span', 'n', String(i + 1)));
+        const body = el('div', 'pbody');
+        body.append(el('p', 'ptext', text));
+        if (c) body.append(sourceLink(c));
+        li.append(body);
+        list.append(li);
+      });
+      out.append(list);
+      return;
+    }
+
+    const ans = el('p', 'answer');
+    // Render [n] markers as links to the numbered sources; everything else as text.
+    for (const part of res.answer.split(/(\[\d+\])/g)) {
+      const m = part.match(/^\[(\d+)\]$/);
+      const c = m && res.citations[+m[1] - 1];
+      if (c) {
+        const sup = el('sup');
+        const a = el('a', '', m![1]);
+        safeHref(a, c.url);
+        sup.append(a);
+        ans.append(sup);
+      } else ans.append(document.createTextNode(part));
+    }
+    out.append(ans);
+    if (!res.citations.length) return;
+    if (res.mode === 'refused') {
+      const actions = el('div', 'actions');
+      res.citations.forEach((c) => {
+        const a = el('a', 'btn', c.title);
+        safeHref(a, c.url);
+        actions.append(a);
+      });
+      out.append(actions);
+      return;
+    }
+    out.append(el('p', 'src-head', 'Sources'));
+    const list = el('ol', 'sources');
+    res.citations.forEach((c, i) => {
+      const li = el('li');
+      li.append(sourceLink(c, i + 1));
+      list.append(li);
+    });
+    out.append(list);
+  }
+
+  document.querySelectorAll<HTMLElement>('[data-ask]').forEach((root) => {
+    const form = root.querySelector<HTMLFormElement>('[data-ask-form]')!;
+    const input = form.querySelector('input')!;
+    const out = root.querySelector<HTMLElement>('[data-ask-out]')!;
+    let busy = false;
+
+    async function run(q: string) {
+      q = q.trim();
+      if (q.length < 3 || busy) return;
+      busy = true;
+      out.hidden = false;
+      const thinking = el('p', 'thinking');
+      thinking.append(el('i'), document.createTextNode('retrieving context · generating a grounded answer'));
+      out.replaceChildren(thinking);
+      let res: AskResult;
+      try {
+        res = await askApi(q);
+      } catch {
+        res = await askLocal(q).catch(() => ({ answer: 'The assistant is unavailable right now.', citations: [], mode: 'refused' as const }));
+      }
+      render(out, q, res);
+      busy = false;
+    }
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      run(input.value);
+    });
+    root.querySelectorAll<HTMLButtonElement>('[data-ask-suggest]').forEach((b) =>
+      b.addEventListener('click', () => {
+        input.value = b.textContent!.trim();
+        run(input.value);
+      }),
+    );
+    const pre = new URLSearchParams(location.search).get('q');
+    if (pre && root.closest('[data-ask-autorun]')) {
+      input.value = pre;
+      run(pre);
+    }
+  });
+</script>

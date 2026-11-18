@@ -1,0 +1,27 @@
+flowchart TD
+  subgraph BAKE["Image bakery · rebuilt on the patch cycle"]
+    direction LR
+    IB["Azure Image Builder / Packer<br/>OS baseline · hardening"]
+    AG["AMA monitoring · standard tools<br/>security and management agents"]
+    GAL["Compute Gallery<br/>versioned golden image"]
+    IB --> AG
+    AG --> GAL
+  end
+  subgraph BUILD["VM factory · one Harness trigger · gate and build"]
+    direction LR
+    PRE["Pre-flight gate<br/>CyberArk readiness · approvals"]
+    TF["Provision · Terraform Enterprise<br/>per-app workspace · pinned image"]
+    ANS["Configure · Ansible<br/>standard roles and inputs"]
+    PRE --> TF
+    TF --> ANS
+  end
+  subgraph PROVE["VM factory · install and prove"]
+    direction LR
+    APP["Templated app install<br/>secrets and certs from the pipeline"]
+    RDY["Readiness checks · controlled retries<br/>fail fast: fix the cause, no reruns"]
+    EV["App-ready<br/>one evidence record per VM"]
+    APP --> RDY
+    RDY --> EV
+  end
+  BAKE -- "image version pinned in Terraform" --> BUILD
+  BUILD --> PROVE

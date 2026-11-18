@@ -1,0 +1,13 @@
+flowchart LR
+    SPEC["Design specs<br/>18 rooms, finishes, Vastu"] --> GEN
+    SPEC --> V
+    subgraph PIPE["pipeline.py --all"]
+        GEN["generate_plans_v4.py<br/>Pillow + matplotlib"] --> PDF["generate_pdfs.py<br/>fpdf2"]
+        PDF --> SYNC["3D sync check<br/>room count + staleness"]
+        SYNC --> CTX["Context doc<br/>last-run timestamp"]
+    end
+    GEN --> IMG["6 plan + elevation images"]
+    PDF --> DOCS["PDFs<br/>English, Kannada, Malayalam"]
+    V["3d-viewer/index.html<br/>Three.js r0.164.1,<br/>procedural textures"] -.-> SYNC
+    V --> GHA["GitHub Actions<br/>deploy workflow"]
+    GHA --> PAGES["GitHub Pages<br/>live walkthrough"]

@@ -1,0 +1,69 @@
+---
+title: "shorts-engine"
+repo: "https://github.com/rakshith-ponnappa/shorts-engine"
+tagline: "An early-stage, guardrailed YouTube Shorts pipeline: trend discovery, clipping of own or rights-cleared video, Whisper captions, optional AI originals behind human review, and private uploads on a conservative ramp."
+category: "ai"
+year: 2026
+status: "active"
+stack: ["Python 3.10+", "YouTube Data API v3", "Google OAuth", "faster-whisper", "OpenAI / Azure OpenAI", "ffmpeg + libass", "yt-dlp", "SQLite", "launchd / systemd", "GitHub Actions"]
+highlights:
+  - "Nothing is clipped unless the rights registry lists it; licensed sources without a written permission reference are refused."
+  - "Duplicate guardrails: transcript shingle Jaccard, time overlap with earlier clips, and normalised title matching."
+  - "AI originals carry the synthetic-media flag and wait in a human review queue; high-risk scripts are always held."
+  - "Uploads are always private with a scheduled publish time, ramping from 1 to 3 a day."
+metrics:
+  - { value: "18", label: "offline pytest tests" }
+  - { value: "1 → 3", label: "uploads per day, default ramp" }
+  - { value: "20–58 s", label: "highlight window length" }
+  - { value: "−14 LUFS", label: "loudness target on renders" }
+diagram: "/diagrams/shorts-engine.svg"
+diagramAlt: "Trends from the YouTube Data API and a rights registry feed source selection. Sources are transcribed with Whisper and scored for highlights; trends can also seed LLM-scripted AI originals. Both pass through guardrails for rights, overlap and duplicates, are rendered at 9:16 with captions, and AI originals wait for human review. Approved items are uploaded privately on a schedule, and stats feed back into trend scoring. SQLite holds state."
+order: 6
+---
+
+## The problem
+
+Automating short-form video is easy to do badly. The obvious version scrapes popular videos, cuts them up and re-uploads them at volume. That is copyright infringement and the fastest way to get a channel struck under YouTube's reused-content and spam policies. I wanted to see what an automated pipeline looks like when the guardrails are the design, not an afterthought: it should only touch content it has rights to, refuse near-duplicates, disclose synthetic media, put a human in front of AI-generated scripts, and default to low volume.
+
+## How it works
+
+`shorts-engine run` executes one day of the pipeline; `daemon` repeats it until the campaign ends.
+
+1. **Trends.** `trends.py` finds the most-viewed recent uploads for niche keywords through the YouTube Data API, drops off-topic hits, and scores keywords by view velocity, with extra weight from the channel's own top performers.
+2. **Sources.** `sources.py` only uses what the rights registry in `config.yaml` lists: own videos dropped in `data/inbox/`, or licensed URLs downloaded with yt-dlp that carry a recorded `permission_ref`.
+3. **Highlights.** faster-whisper produces a transcript with word timings. `highlights.py` cuts 20 to 58-second windows and scores them for hook, pace and trend match. An optional LLM pass re-ranks them and writes the title, hook, commentary and tags.
+4. **AI originals.** With an LLM configured, `original.py` scripts a short on a trending topic, narrates it with TTS and lays captions over owned b-roll.
+5. **Guardrails.** `guardrails.py` checks rights and, with the default thresholds, rejects clips that overlap an earlier clip from the same source by more than 50%, rejects transcripts above 0.6 Jaccard similarity on 3-word shingles, and rejects duplicate normalised titles.
+6. **Render.** ffmpeg produces 1080×1920 output with a blurred fill background, word-by-word highlighted ASS captions, hook text, a credit line, a spoken commentary intro and audio normalised to −14 LUFS.
+7. **Review and upload.** AI originals wait until `shorts-engine review --approve <id>`. Uploads are resumable, always `private` with a `publishAt` time spread across the publish window, and stop cleanly when the API quota is hit.
+8. **Stats.** Views, likes and comments for the last 14 days of uploads feed back into trend scoring.
+
+## Engineering decisions
+
+**Rights as data, enforced in code.** The registry is configuration and the check is code. A licensed source with no permission reference is refused rather than warned about, because a warning in a daemon log is not a control.
+
+**Cheap, explainable duplicate detection.** Shingle Jaccard and interval overlap are simple and fast, and when they reject a clip I can say exactly why. Embeddings would catch more paraphrase, but a guardrail that cannot explain itself is hard to tune.
+
+**Volume is the last lever, not the first.** The ramp grows linearly from 1 to 3 uploads a day over 14 days, and `plan` prints the day-by-day quota before anything runs. Each source yields at most a configured number of clips per day and earlier clips are never reused. The README says it bluntly: more sources raise volume, turning off guardrails does not.
+
+**Identity checks on every batch.** `auth` refuses to log in as any channel other than the configured `channel_id`, and every upload batch re-checks it, so a wrong browser session cannot publish to the wrong channel.
+
+**Degrade without an LLM.** Without one, clips still work with heuristic scoring and the first sentence as the title. AI originals and spoken commentary are skipped rather than faked.
+
+**Operational honesty about Google.** The README documents the two restrictions that will bite: uploads from unaudited API projects stay private, and refresh tokens for "Testing" OAuth apps expire after seven days.
+
+## Results & evidence
+
+- **18 offline pytest tests** (16 functions, one parametrised over three degenerate ramp shapes). They cover the duplicate guardrail, the rights registry, the ramp and quota maths, publish-slot spacing, config validation, captions, highlight scoring and trend aggregation. Heavy optional dependencies are skipped with `importorskip`, and render tests skip without a libass-enabled ffmpeg.
+- CI runs the suite on Python 3.10, 3.11 and 3.12.
+- `doctor` checks every setup step, and `run --dry-run` renders and shows the schedule without uploading.
+
+I report no channel performance numbers; the project is about the pipeline and its controls.
+
+## Limitations & next steps
+
+- **Early-stage.** It works end-to-end for a single owner and channel, but interfaces and config keys may change. The README says so in a badge at the top.
+- **No pipeline integration tests yet.** The tests cover the logic units; the orchestration in `pipeline.py` is not tested against mocked YouTube and LLM clients.
+- **Guardrails do not guarantee policy compliance.** They reduce risk; the operator still has to read and follow YouTube's policies.
+- **Clips skip human review** by default; only AI originals are held.
+- **Next:** integration tests, licence metadata with expiry and scope, a local review UI, optional review for clips, a policy lint for titles and descriptions, and a container image with ffmpeg and libass.

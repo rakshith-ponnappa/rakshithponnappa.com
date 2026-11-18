@@ -1,0 +1,67 @@
+---
+title: "TalentLens"
+repo: "https://github.com/rakshith-ponnappa/TalentLens"
+tagline: "A resume-screening pipeline that scores candidates the way a hiring panel would: eleven specialist reviewers, a deliberation round and a weighted consensus, with an offline mode that needs no API key."
+category: "ai"
+year: 2026
+status: "active"
+stack: ["Python 3.11+", "Streamlit", "Plotly", "Sentence-Transformers", "scikit-learn", "Typer", "SQLite", "OpenAI / Anthropic (optional)", "GitHub Actions", "taskctl"]
+highlights:
+  - "Eleven persona agents score independently, adjust after seeing each other's findings, then reach a weighted consensus."
+  - "Hybrid semantic match: TF-IDF 40%, Sentence-BERT 40%, Jaccard 20%, with a TF-IDF fallback when embeddings are unavailable."
+  - "Heuristic mode runs the whole pipeline with no API key; an LLM only improves parsing."
+  - "Local and CI DevSecOps gates: Ruff, MyPy, Bandit, pip-audit, Gitleaks, pytest."
+metrics:
+  - { value: "79", label: "pytest tests across 7 modules" }
+  - { value: "11", label: "specialist agent personas" }
+  - { value: "6", label: "weighted scoring dimensions" }
+  - { value: "3", label: "deliberation rounds per candidate" }
+diagram: "/diagrams/talentlens.svg"
+diagramAlt: "A job description goes through the JD analyser and resumes through the parser; the parser also feeds background verification. Both feed the scoring engine, which drives the eleven-agent panel. The panel deliberates, produces a consensus, and the consensus drives rankings and an interview question generator, with results persisted to SQLite."
+order: 1
+---
+
+## The problem
+
+Screening a stack of resumes against a job description is slow and inconsistent. Keyword matchers are fast but shallow: they can see "AWS" on a page and cannot tell whether the candidate designed a production platform or followed a tutorial. One reviewer has one lens. A real hiring panel works better because a security architect, an SRE and an HR manager each notice different things, then argue.
+
+I wanted a tool that copies the panel structure, explains every score it gives, and still works on a laptop with no API key.
+
+## How it works
+
+The input is a job description and a set of PDF or DOCX resumes. The output is a ranked list, per-agent evaluations, verification flags and an interview questionnaire.
+
+1. **JD analysis.** `jd_analyzer.py` turns the job description into structured criteria: required and preferred skills, experience, education level and certifications. It uses an LLM if a key is configured and falls back to `heuristics.py` (regex and rule-based parsing) if not.
+2. **Resume parsing.** `resume_parser.py` builds a candidate profile the same way, with the same fallback.
+3. **Verification.** `verifier.py` orchestrates company checks against OpenCorporates, certification lookups against a bundled registry, LinkedIn profile signals, email MX lookups and employment timeline analysis, and rolls them into a trust score.
+4. **Scoring.** `scorer.py` scores six dimensions with default weights of 35 (required skills), 25 (experience), 15 (preferred skills), 10 (education), 10 (certifications) and 5 (semantic match). The semantic dimension blends TF-IDF cosine (40%), Sentence-BERT cosine with `all-MiniLM-L6-v2` (40%) and Jaccard word overlap (20%).
+5. **The panel.** `agents.py` defines eleven agents, from Cloud Solutions Architect (14% weight) down to QA Architect and Product Owner (6% each). Round one: each scores the candidate from its own perspective. Round two: each agent reads the panel's output and adjusts. If Security scores below 40, every other agent takes a penalty; strong architecture lifts the cloud and ops agents; an agent more than 20 points from the panel average is pulled 15% of the way back. Round three is a weighted consensus with a grade and a recommendation.
+6. **Output.** Rankings, a skill-gap analysis, a DOCX interview questionnaire built from gaps and agent concerns, and history persisted to SQLite. A Typer CLI and an eight-page Streamlit dashboard sit over the same pipeline.
+
+## Engineering decisions
+
+**Deterministic agents, optional LLM.** The panel agents are Python classes with explicit rules, not prompts. That was deliberate. A screening score has to be reproducible and explainable, and every deliberation adjustment is written to a discussion log with its reason ("SRE flags ops immaturity", "Adjusting toward panel average"). The LLM, when present, only improves parsing. The cost is that the agents are only as good as their rules, which I tuned for cloud and platform roles.
+
+**Hybrid similarity instead of embeddings alone.** SBERT catches paraphrase, TF-IDF rewards precise terminology, and Jaccard is a cheap sanity check. If `sentence-transformers` fails to import, the SBERT share falls back to TF-IDF rather than failing the run. I wrote the TF-IDF myself so the core path does not need scikit-learn.
+
+**Bounded deliberation.** Cross-agent adjustments are small (2 to 5 points) and the drag toward the mean is capped. Unbounded feedback between agents would make the consensus depend on evaluation order.
+
+**Weights in configuration.** Dimension weights come from `.env` (`WEIGHT_*`) or dashboard sliders and must sum to 100. Agent weights live in `agents.py`.
+
+**Quality gates I would expect from a team.** `taskctl run all` runs Ruff, MyPy, Bandit, pip-audit and Gitleaks in parallel, then pytest, then an Allure report. CI runs the same stages on Python 3.11, 3.12 and 3.13 and builds the Docker image. Pre-commit hooks enforce conventional commits and block direct commits to `main`.
+
+## Results & evidence
+
+- **79 pytest tests** across seven modules. I counted the test functions: 24 for the pipeline state machine, 13 for red-flag detection, 12 for candidate comparison, 9 for archetype classification, 8 for history persistence, 7 for export formats and 6 for JD quality.
+- The README's generated stats block reports a 100% pass rate and 25.5% line coverage.
+- The full pipeline runs offline in heuristic mode, which is how the CLI and dashboard can be tried without credentials.
+
+I have not benchmarked ranking quality against human panel decisions, so I make no accuracy claim.
+
+## Limitations & next steps
+
+- **Coverage is low at about 26%.** The tests cover the supporting modules (pipeline, red flags, comparison, history, export); the agent panel and scorer have no unit tests yet. That is the first thing I would fix.
+- **Agent rules are domain-specific.** The personas and weights assume AWS-leaning cloud and platform roles. Other roles need new personas.
+- **Verification depends on public signals.** OpenCorporates coverage and LinkedIn resolution are best-effort and can miss legitimate history.
+- **Dashboard screenshots are still missing** from the README, and older dashboard versions (`dashboard.py`, `dashboard_v2.py`) remain in the repo alongside `dashboard_v3.py`.
+- **Next:** a labelled evaluation set of synthetic resumes so ranking changes can be measured, and unit tests for every deliberation rule.

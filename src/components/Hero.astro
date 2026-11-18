@@ -1,0 +1,479 @@
+---
+import { Picture } from 'astro:assets';
+import Icon from './Icon.astro';
+import Hero3D from './Hero3D.astro';
+import portrait from '../assets/rakshith-portrait.png';
+import { profile, experience, certifications } from '../data/profile';
+import { uptimeParts } from '../scripts/ui';
+
+const u = uptimeParts(profile.careerStart);
+const current = experience.find((r) => r.end === null)!;
+// Featured certs as short codes; uncoded ones collapse to issuer (+ "Pro"), e.g. "AWS Pro ×2".
+const certCodes = new Map<string, number>();
+for (const c of certifications.filter((c) => c.featured)) {
+  const k = c.code ?? `${c.issuer}${/Professional/.test(c.name) ? ' Pro' : ''}`;
+  certCodes.set(k, (certCodes.get(k) ?? 0) + 1);
+}
+const certTags = [...certCodes].map(([k, n]) => (n > 1 ? `${k} ×${n}` : k));
+const clients = [
+  'State Street',
+  'Five Below',
+  'PlanHub',
+  'Crédit du Maroc',
+  'Mott MacDonald',
+  'Kingfisher',
+  'Menzies',
+  'EZCorp',
+  'DU Telecom',
+  'Etisalat',
+  'RAK Bank',
+  'Dubai Municipality',
+  'Petroleum Development Oman',
+  'Heathrow',
+  'Carnival',
+  'Grant Thornton',
+  'Anglian Water',
+];
+---
+
+<section class="hero" aria-labelledby="hero-name">
+  <Hero3D />
+  <div class="container-x hero-grid">
+    <div class="copy">
+      <p class="status mono enter" data-i="0">
+        <span class="dot" data-pulse data-tone="signal"></span>
+        <span class="headline">Open to new roles</span>
+        <span class="sep hide-xs">/</span>
+        <span class="hide-xs">Bengaluru <time data-clock data-tz="Asia/Kolkata">--:--</time> IST</span>
+      </p>
+      <h1 id="hero-name" class="name enter" data-i="1">{profile.name}</h1>
+      <p class="role enter" data-i="2">
+        Principal Platform Engineer. <em class="serif">I build the platforms enterprises run on, and the infrastructure AI agents are trained in.</em>
+      </p>
+      <p class="pitch enter" data-i="3">{profile.heroPitch}</p>
+      <div class="ctas enter" data-i="4">
+        <a class="btn btn-primary" href={profile.resumePdf} download>
+          <Icon name="download" /> Download résumé
+        </a>
+        <a class="btn" href="/contact/">Open a ticket <Icon name="arrow-right" /></a>
+        <button class="btn btn-ghost" type="button" data-cmdk-open>
+          <Icon name="sparkle" /> Ask anything <kbd data-mod aria-hidden="true">⌘K</kbd>
+        </button>
+      </div>
+      <p class="direct mono enter" data-i="5">
+        <a href={`mailto:${profile.email}`}><Icon name="mail" size={14} /> {profile.email}</a>
+        <a href={profile.phoneHref}><Icon name="phone" size={14} /> {profile.phone}</a>
+      </p>
+    </div>
+
+    <aside class="node enter" data-i="2" aria-label="At a glance">
+      <figure class="portrait">
+        <Picture
+          src={portrait}
+          alt={`Portrait of ${profile.name}`}
+          widths={[320, 480, 640, 846]}
+          sizes="(max-width: 900px) 72vw, 380px"
+          formats={['avif', 'webp']}
+          fallbackFormat="jpg"
+          loading="eager"
+          fetchpriority="high"
+          class="portrait-img"
+        />
+        <figcaption class="mono">
+          <span>node/rakshith-sp</span>
+          <span class="ready"><span class="dot"></span> Ready</span>
+        </figcaption>
+      </figure>
+      <dl class="uptime mono tabular" data-uptime={profile.careerStart}>
+        <div>
+          <dt>uptime</dt>
+          <dd>
+            <span data-u="y">{u.y}</span>y <span data-u="m">{String(u.m).padStart(2, '0')}</span>m <span data-u="d"
+              >{String(u.d).padStart(2, '0')}</span
+            >d <span class="hms" data-u="hms">{u.hms}</span>
+          </dd>
+        </div>
+        <div><dt>since</dt><dd>Aug 2014 · Capgemini</dd></div>
+        <div><dt>current</dt><dd>Principal Consultant · {current.company}</dd></div>
+        <div><dt>regions</dt><dd>Bengaluru · Dubai · Muscat</dd></div>
+        <div>
+          <dt>certs</dt>
+          <dd>
+            <a class="certs" href="/credentials/">
+              <span class="cert-n">{certifications.length}</span>
+              <span class="sr-only"> certifications, including</span>
+              {certTags.map((t) => <span class="cert-tag">{t}</span>)}
+            </a>
+          </dd>
+        </div>
+      </dl>
+    </aside>
+  </div>
+
+  <div class="ticker" aria-label="Organisations I have delivered for">
+    <div class="ticker-head container-x">
+      <p class="eyebrow">Delivered for</p>
+      <label class="pause mono"><input type="checkbox" data-ticker-pause /> <span>Pause</span></label>
+    </div>
+    <div class="track" role="list">
+      {
+        [0, 1].map((dup) => (
+          <div class="run" aria-hidden={dup ? 'true' : undefined}>
+            {clients.map((c) => (
+              <span role={dup ? undefined : 'listitem'}>{c}</span>
+            ))}
+          </div>
+        ))
+      }
+    </div>
+  </div>
+</section>
+
+<style>
+  .hero {
+    position: relative;
+    isolation: isolate;
+    padding-top: clamp(2.5rem, 5.5vw, 4.5rem);
+    overflow: clip;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -2;
+    background:
+      radial-gradient(60% 60% at 78% 30%, color-mix(in oklch, var(--signal) 9%, transparent), transparent 70%),
+      radial-gradient(40% 50% at 95% 80%, color-mix(in oklch, var(--azure) 9%, transparent), transparent 70%);
+  }
+  .hero::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -3;
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 56px 56px;
+    mask-image: radial-gradient(80% 70% at 60% 30%, #000 30%, transparent 75%);
+  }
+  .hero-grid {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr);
+    gap: clamp(2rem, 5vw, 5rem);
+    align-items: center;
+  }
+  .status {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.45rem 0.85rem 0.45rem 0.7rem;
+    border: 1px solid var(--line-soft);
+    border-radius: 999px;
+    background: color-mix(in oklch, var(--bg-raised) 70%, transparent);
+    backdrop-filter: blur(6px);
+    font-size: 0.75rem;
+    color: var(--fg-muted);
+  }
+  .status .sep {
+    color: var(--line);
+  }
+  .name {
+    margin-top: 1.6rem;
+    font-size: var(--step-5);
+    font-weight: 620;
+    letter-spacing: -0.05em;
+    line-height: 0.92;
+    background: linear-gradient(180deg, var(--fg) 30%, color-mix(in oklch, var(--fg) 62%, var(--bg)));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    view-transition-name: hero-name;
+  }
+  .role {
+    margin-top: 1.4rem;
+    font-size: var(--step-2);
+    line-height: 1.22;
+    letter-spacing: -0.02em;
+    font-weight: 500;
+    max-width: 30ch;
+    text-wrap: balance;
+  }
+  .role em {
+    display: block;
+    font-style: italic;
+    font-size: 1.08em;
+    color: var(--fg-muted);
+  }
+  .pitch {
+    margin-top: 1.4rem;
+    max-width: 58ch;
+    color: var(--fg-muted);
+  }
+  .ctas {
+    margin-top: 2.2rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.7rem;
+  }
+  .direct {
+    margin-top: 1.1rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1.4rem;
+    font-size: 0.8rem;
+  }
+  .direct a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    min-height: 1.75rem;
+    color: var(--fg-muted);
+    transition: color var(--t-2);
+  }
+  .direct a:hover {
+    color: var(--signal);
+  }
+  .ctas kbd {
+    margin-left: 0.15rem;
+  }
+
+  .node {
+    display: grid;
+    gap: 0.9rem;
+    justify-self: end;
+    width: min(100%, 360px);
+  }
+  .portrait {
+    position: relative;
+    margin: 0;
+    border-radius: 22px;
+    overflow: hidden;
+    border: 1px solid var(--line-soft);
+    background: radial-gradient(120% 80% at 50% 0%, oklch(0.27 0.02 255), oklch(0.15 0.01 255));
+    box-shadow:
+      0 0 0 1px color-mix(in oklch, var(--signal) 22%, transparent),
+      0 0 0 6px color-mix(in oklch, var(--bg) 70%, transparent),
+      0 40px 80px -40px oklch(0 0 0 / 0.75);
+    aspect-ratio: 846 / 966;
+    view-transition-name: portrait;
+  }
+  .portrait::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(to top, oklch(0.13 0.01 255 / 0.85), transparent 32%),
+      repeating-linear-gradient(0deg, oklch(1 0 0 / 0.015) 0 1px, transparent 1px 3px);
+    pointer-events: none;
+  }
+  .portrait :global(.portrait-img) {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .portrait figcaption {
+    position: absolute;
+    z-index: 1;
+    left: 0.9rem;
+    right: 0.9rem;
+    bottom: 0.8rem;
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.72rem;
+    color: oklch(0.9 0.01 255);
+  }
+  .ready {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    color: oklch(0.84 0.19 150);
+  }
+  .ready .dot {
+    --c: oklch(0.84 0.19 150);
+    width: 6px;
+    height: 6px;
+  }
+  .uptime {
+    display: grid;
+    gap: 0.35rem;
+    padding: 0.95rem 1.05rem;
+    border-radius: 14px;
+    border: 1px solid var(--line-soft);
+    background: color-mix(in oklch, var(--bg-raised) 94%, transparent);
+    backdrop-filter: blur(8px);
+    font-size: 0.76rem;
+  }
+  .uptime div {
+    display: grid;
+    grid-template-columns: 4.6rem 1fr;
+    gap: 0.5rem;
+  }
+  .uptime dt {
+    color: var(--fg-faint);
+  }
+  .uptime dd {
+    color: var(--fg);
+    text-wrap: balance;
+  }
+  .uptime div:first-child dd {
+    color: var(--signal);
+  }
+  .hms {
+    color: var(--fg-muted);
+  }
+  .uptime dd .link {
+    color: inherit;
+  }
+  .certs {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.3rem;
+    color: inherit;
+  }
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .cert-n {
+    margin-right: 0.15rem;
+    color: var(--fg);
+  }
+  .cert-tag {
+    padding: 0.05rem 0.4rem;
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    font-size: 0.68rem;
+    line-height: 1.5;
+    color: var(--fg-muted);
+    white-space: nowrap;
+    transition:
+      border-color var(--t-2),
+      color var(--t-2);
+  }
+  .certs:hover .cert-tag {
+    border-color: color-mix(in oklch, var(--signal) 55%, var(--line));
+    color: var(--fg);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .hms {
+      display: none;
+    }
+  }
+
+  .ticker {
+    margin-top: clamp(2rem, 4vw, 3rem);
+    padding-block: 1.5rem clamp(2rem, 4vw, 3rem);
+    border-top: 1px solid var(--line-soft);
+  }
+  .ticker-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+  .pause {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-height: 1.5rem;
+    font-size: 0.72rem;
+    color: var(--fg-faint);
+    cursor: pointer;
+  }
+  .pause input {
+    accent-color: var(--signal);
+  }
+  .track {
+    display: flex;
+    overflow: hidden;
+    mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+  }
+  .run {
+    display: flex;
+    flex: none;
+    gap: 2.75rem;
+    padding-right: 2.75rem;
+    font-size: 1.05rem;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    color: var(--fg-faint);
+    white-space: nowrap;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .run {
+      animation: marquee 60s linear infinite;
+    }
+    .track:hover .run,
+    .ticker:has([data-ticker-pause]:checked) .run {
+      animation-play-state: paused;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .pause {
+      display: none;
+    }
+  }
+  @keyframes marquee {
+    to {
+      transform: translateX(-100%);
+    }
+  }
+
+  @media (max-width: 900px) {
+    .hero-grid {
+      grid-template-columns: 1fr;
+    }
+    .node {
+      justify-self: start;
+      grid-template-columns: minmax(0, 200px) 1fr;
+      width: 100%;
+      align-items: end;
+    }
+  }
+  @media (max-width: 420px) {
+    .hide-xs {
+      display: none;
+    }
+  }
+  @media (max-width: 560px) {
+    .node {
+      grid-template-columns: 7.5rem minmax(0, 1fr);
+      align-items: stretch;
+    }
+    .portrait {
+      width: 100%;
+      aspect-ratio: auto;
+      min-height: 100%;
+      border-radius: 16px;
+      box-shadow:
+        0 0 0 1px color-mix(in oklch, var(--signal) 22%, transparent),
+        0 0 0 4px color-mix(in oklch, var(--bg) 70%, transparent);
+    }
+    .portrait figcaption {
+      display: none;
+    }
+    .uptime {
+      font-size: 0.7rem;
+      padding: 0.75rem 0.85rem;
+    }
+    .uptime div {
+      grid-template-columns: 3.75rem minmax(0, 1fr);
+    }
+    .ctas .btn {
+      flex: 1 1 100%;
+      justify-content: center;
+    }
+    .hide-sm {
+      display: none;
+    }
+  }
+</style>

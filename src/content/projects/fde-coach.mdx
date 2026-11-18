@@ -1,0 +1,70 @@
+---
+title: "fde-coach"
+repo: "https://github.com/rakshith-ponnappa/fde-coach"
+tagline: "A zero-dependency Python CLI that structures preparation for Forward Deployed Engineer and AI platform interviews: a 26-week curriculum, a daily coach with pacing and streaks, and a job finder over 87 companies' public job-board APIs."
+category: "tools"
+year: 2026
+status: "active"
+stack: ["Python 3.11+ (stdlib only)", "argparse", "sqlite3", "tomllib", "urllib", "concurrent.futures", "unittest", "GitHub Actions"]
+highlights:
+  - "Standard library only: urllib, sqlite3, tomllib, argparse and concurrent.futures cover everything."
+  - "Curriculum and job filters are TOML data, so the plan adapts without touching Python."
+  - "Polls Greenhouse, Lever and Ashby boards concurrently over public APIs; no logins, no scraping."
+  - "Visa-sponsorship hints judged sentence by sentence, so a 'yes' is not cancelled by a caveat elsewhere."
+metrics:
+  - { value: "32", label: "offline unittest tests" }
+  - { value: "87", label: "company job boards polled" }
+  - { value: "26", label: "weeks in the curriculum" }
+  - { value: "0", label: "third-party dependencies" }
+diagram: "/diagrams/fde-coach.svg"
+diagramAlt: "The fde CLI dispatches to three modules: learning (plan, pace, streaks, skills) reading curriculum.toml; jobs (fetch, classify, pipeline) reading config.toml and fetching Greenhouse, Lever and Ashby APIs concurrently; and report, which writes a weekly Markdown report. All three persist to a local SQLite database."
+order: 11
+---
+
+## The problem
+
+Moving from cloud and platform engineering into Forward Deployed Engineer and applied-AI roles means running two projects at once: closing the skills gap and running a job search. Both usually live in a pile of spreadsheets, bookmarks and job-site tabs. The learning side needs a plan and honest pacing. The search side needs a steady feed of relevant roles without logging into a dozen sites or scraping anything.
+
+I built `fde` to hold both in one terminal command, for my own transition first, in a form anyone could fork.
+
+## How it works
+
+`fde` is an argparse CLI over three modules and a SQLite file at `data/fde.db`.
+
+**`learning.py`** reads `curriculum.toml`: a 16-week sprint from new-to-Python to job-ready, then a 10-week depth track. `fde today` works out the current week from the plan start date, reports whether I am ahead or behind, shows the streak and this week's logged hours, and prints a four-hour session template with a different shape for Sundays (finish the deliverable, review from memory, write the weekly report). `fde log` records hours, `fde week done` marks a week shipped with a note, and `fde skills` tracks 21 skills on a 0 to 5 scale against targets.
+
+**`jobs.py`** reads the company list from `config.toml`; the shipped example has 87 entries, each a name, an ATS (`greenhouse`, `lever` or `ashby`) and a board slug. `fetch_all` pulls the boards concurrently with a thread pool over `urllib`, and per-ATS parsers normalise postings. Each posting is then:
+
+- **Tiered** by title regex: A for FDE and deployment roles, B for applied AI and AI platform, C for platform, SRE and DevOps. Junior or irrelevant titles are excluded.
+- **Region-tagged** by configurable location regexes, with separate handling for remote roles.
+- **Checked for sponsorship.** `sponsorship_of()` splits the description into sentences and returns yes, no, relocation, or not stated.
+
+Jobs move through a pipeline (new, shortlisted, applied, interviewing, offer) with notes and follow-up reminders. `fde jobs skills` counts which skill keywords recent FDE-style ads mention, and `fde jobs links` builds LinkedIn searches to open by hand.
+
+**`report.py`** writes a dated Markdown progress report.
+
+## Engineering decisions
+
+**Standard library only.** A personal tool should install anywhere and never break on a dependency update. `urllib`, `sqlite3`, `tomllib`, `argparse` and `concurrent.futures` covered every need. A launcher script adds the repo to `PYTHONPATH`, so there is no install step at all.
+
+**Plans and filters are data.** The curriculum, tier regexes, region regexes and skill keywords are all TOML. Someone on a different path edits a file, not Python. A unit test checks that `curriculum.toml` stays internally consistent after edits.
+
+**Sentence-level sponsorship parsing.** Job ads hedge. "We do sponsor visas! We can't sponsor every role." should read as yes, and "we're unable to offer visa sponsorship" as no. Matching per sentence and letting an explicit yes win is more accurate than a single regex over the whole text. US abbreviations are normalised first so "U.S." does not end a sentence early.
+
+**Respectful by default.** Only public, unauthenticated job-board APIs are used: no logins, no scraping and no browser automation. Each board is fetched at most once a day from `fde today`, or on an explicit `fde jobs fetch`. Sites without an API get a link, not a crawler.
+
+**SQLite for state.** One portable file, with real queries behind the pipeline counts, follow-ups and reports.
+
+## Results & evidence
+
+- **32 unittest tests**, all offline, with HTTP mocked and temporary directories. They cover the three ATS parsers, tiering, region filters, sponsorship detection, pacing and streak maths, the CLI, and curriculum consistency.
+- CI runs the suite on GitHub Actions.
+- About 1,200 lines of Python across six modules, with a fully commented working `config.example.toml` that is used until a personal `config.toml` exists.
+
+## Limitations & next steps
+
+- **Three ATS providers.** Companies on Workable, SmartRecruiters or in-house careers sites are not covered; those are next on the roadmap.
+- **Tiering is regex on titles.** It is fast and explainable, but misses roles with unusual titles and does not read the description for fit.
+- **The sponsorship hint is a hint.** It reflects the ad's wording, not a company's actual policy.
+- **The curriculum is opinionated.** Its baselines assume an experienced cloud engineer who is new to Python and AI.
+- **Next:** more ATS providers, CSV or calendar export of the pipeline, and an optional LLM summary that matches job descriptions against my skill ratings.

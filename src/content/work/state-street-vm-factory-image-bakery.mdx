@@ -1,0 +1,86 @@
+---
+title: "VM factory & image bakery: VM builds cut from 30 minutes to 2–3"
+client: "State Street (PFI)"
+industry: "Financial services"
+employer: "Ensono"
+period: "2026"
+role: "Lead architect, end to end (diagnosis, design, leadership pitch, build & rollout)"
+summary: "Replacement VM builds at State Street took six steps across four tools, some needed two or three reruns, and security onboarding could add a week. I designed and built a VM factory end to end: a versioned golden image from an image bakery, reusable Terraform and Ansible templates, and one Harness-orchestrated flow with readiness gates. VM build time fell from about 30 minutes to 2–3."
+clouds: ["Azure"]
+stack: ["Azure Image Builder", "Packer", "Azure Compute Gallery", "Terraform Enterprise", "Ansible", "Harness", "CyberArk", "Azure Monitor Agent", "Key Vault & disk encryption sets"]
+metrics:
+  - { value: "78", label: "replacement VMs in the first factory scope" }
+  - { value: "6 → 1", label: "separate build steps folded into one orchestrated flow" }
+  - { value: "~1 week", label: "security-onboarding wait moved ahead of the build window" }
+  - { value: "30 → 2–3 min", label: "VM build time with the golden image" }
+diagram: "/diagrams/state-street-vm-factory-image-bakery.svg"
+diagramAlt: "An image bakery (Azure Image Builder or Packer) produces a hardened, versioned golden image in the Compute Gallery on the patch cycle. One Harness trigger then runs the factory: a pre-flight gate confirms security onboarding and approvals, Terraform provisions from per-app workspaces with the pinned image, Ansible applies standard roles, a templated app install runs, and readiness checks write one evidence record per VM. Failed checks stop the flow early instead of being rerun."
+order: 4
+featured: false
+---
+
+## Context
+
+As part of the move from an NTT data centre to Azure, State Street needed **replacement VMs**: new Azure builds that take over from source servers. The building blocks worked, but the process didn't:
+
+- A VM passed through **six separate steps across four tools**: Terraform in three phases (disk encryption set, Key Vault RBAC, the VM itself), then Ansible/CD configuration, CyberArk enrolment and the application install.
+- **Some VMs needed two or three runs** before they were usable, and the same pipeline could fail differently from one run to the next.
+- **CyberArk enrolment ran on a weekend cycle**, so a VM could be finished from an infrastructure point of view and still wait up to about a week.
+- One application's install was **manual and environment-specific**.
+
+Each VM got over the line eventually. The problem was **predictability**: nobody could commit to a ready-date. I owned this end to end: I diagnosed the causes, designed the factory, took it to leadership, built it, piloted it and rolled it out.
+
+## Constraints
+
+- **Regulated estate.** No change to security controls. CyberArk, approvals and change management had to stay authoritative; only *when* they happen could move.
+- **Existing tooling.** The answer had to use what the bank already ran (Terraform Enterprise, Harness, Ansible, CyberArk, ServiceNow) and add no new platform.
+- **Secrets never in images.** Anything secret, environment-specific or fast-changing had to stay in the pipeline.
+- **Live migration waves.** The factory had to slot into a migration programme already in flight, starting with a low-risk pilot.
+
+## What I did
+
+1. **Mapped the real build path.** I traced 78 in-scope replacement VMs across two applications through every handoff: 78 disk encryption set targets, 78 VM module targets and 75 Ansible batches. That showed that reruns were hiding causes rather than fixing them.
+2. **Designed the image bakery.** The rule: *bake the baseline, pipeline the specifics.*
+   - **Baked into the image:** the approved OS baseline and hardening, monitoring agents (AMA), standard tools and prerequisites, and security and management agents.
+   - **Delivered by the pipeline:** application install and configuration, secrets and certificates, environment settings, and anything that changes often.
+   - **Lifecycle:** images are built with Azure Image Builder or Packer, versioned in an Azure Compute Gallery and rebuilt on the patch cycle. Terraform **pins the image version**, so every build is reproducible.
+3. **Built the factory flow in Harness.** One trigger runs the whole build: golden image → provision (Terraform, per-app workspace, standard modules) → configure (Ansible, standard roles and inputs) → security gate → templated app install → **app-ready, with one evidence record per VM**.
+4. **Replaced reruns with gates.** Readiness checks and controlled retries are built into the flow, and it **stops early** when a dependency is missing instead of failing halfway and being rerun.
+5. **Moved security onboarding forward.** CyberArk readiness became a **pre-build gate** with a known turnaround, confirmed before the build window opens. The controls are the same; the order is different.
+6. **Templated the manual install.** The environment-specific manual install became a reusable per-app pipeline stage, like the other applications'.
+7. **Took it to leadership, piloted it and rolled it out.** I presented the case and the three decisions needed (adopt the factory, name one end-to-end owner, gate CyberArk early). The pilot ran on the smallest application first (4 VMs), then one batch of the large application, measuring build time before and after. It then became the standard build path.
+
+## Key decisions
+
+| Decision | Why | Trade-off |
+|---|---|---|
+| Bake the baseline, pipeline the specifics | Common components install once in a tested image instead of on every VM, so post-build time drops and every VM starts identical. | An image lifecycle to own: builds, versions, patch-cycle rebuilds. |
+| Pin image versions in Terraform | A build is reproducible and an upgrade is a reviewed one-line change. | Images must be promoted deliberately, never "latest". |
+| One Harness flow instead of separate runs | One trigger, one status and one place to see where a VM is stuck. | Stage contracts between teams have to be agreed and kept. |
+| Gates and checks, not reruns | A rerun that clears an error hides its cause, and the next wave hits it again. | Checks take upfront effort to write and maintain. |
+| Security readiness before the build | Infrastructure finishing early is worthless if the VM then waits a week for enrolment. | Requests have to be raised earlier and tracked. |
+| Pilot on the smallest application, then roll out | Proves the flow where a failure breaks 4 VMs, not 74. | The large application waits one cycle longer. |
+
+### Designing ahead: AWS and an assistant layer
+
+The same pattern carries to AWS without repeating today's fragmentation. For AWS:
+- a **migration factory**: Application Migration Service waves, Migration Hub tracking and Application Discovery for dependencies;
+- golden images from **EC2 Image Builder or Packer**.
+
+For operators, an **assistant layer** answers "where is this VM stuck, what failed in plain terms, what is the next approved action?". It can trigger only pre-approved, audited workflows: Harness still runs pipelines, Terraform Enterprise runs Terraform, ServiceNow owns change and CyberArk owns privileged access. The options I assessed include Amazon Q Developer in Teams or Slack, a Bedrock-based assistant, and EventBridge and Lambda calling the Harness, TFE and ServiceNow APIs.
+
+## Outcome
+
+- A **VM factory** with one orchestrated flow, replacing six separate steps across four tools.
+- An **image bakery** producing a hardened, versioned golden image on the patch cycle, pinned by Terraform.
+- **Readiness gates and per-VM evidence**, so status is a record rather than a round of follow-up messages.
+- **Security onboarding moved ahead of the build window**, with no change to the controls themselves.
+- The manual application install **templated** like the others.
+- **VM build time cut from about 30 minutes to 2–3 minutes.** The baseline, agents and tools are already in the image, so a build only provisions, configures and installs what is specific to the VM.
+- **Less complexity per build:** one trigger and one status instead of six separate runs, and gates instead of reruns. The factory lines up with the [Terraform Enterprise split](/work/state-street-terraform-enterprise-split/): same templates, same controls, same readiness reporting.
+
+## What I'd do next
+
+- **Put the numbers on a dashboard.** Build time and first-run success per wave, on a dashboard the leadership team already reads.
+- **Make the golden image a product.** Give it release notes, a CVE scan gate and a deprecation window per version, so app teams can plan upgrades.
+- **Build the DR side from the same image.** Then every patch-cycle release also refreshes the recovery estate.

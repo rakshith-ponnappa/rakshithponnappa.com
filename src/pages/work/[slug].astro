@@ -1,0 +1,69 @@
+---
+import { getCollection, render } from 'astro:content';
+import ArticleLayout from '../../layouts/ArticleLayout.astro';
+import { profile } from '../../data/profile';
+
+export async function getStaticPaths() {
+  const items = (await getCollection('work')).sort((a, b) => a.data.order - b.data.order);
+  return items.map((entry, i) => ({
+    params: { slug: entry.id },
+    props: {
+      entry,
+      prev: items[i - 1] && { href: `/work/${items[i - 1].id}/`, title: items[i - 1].data.title },
+      next: items[i + 1] && { href: `/work/${items[i + 1].id}/`, title: items[i + 1].data.title },
+    },
+  }));
+}
+
+const { entry, prev, next } = Astro.props;
+const { Content, headings } = await render(entry);
+const d = entry.data;
+const jsonLd = [
+  {
+    '@type': 'TechArticle',
+    headline: d.title,
+    description: d.summary,
+    author: { '@id': `${Astro.site}#person` },
+    about: d.client,
+    keywords: d.stack.join(', '),
+    url: new URL(`/work/${entry.id}/`, Astro.site).toString(),
+    inLanguage: 'en-GB',
+  },
+];
+---
+
+<ArticleLayout
+  kind="work"
+  slug={entry.id}
+  title={d.title}
+  eyebrow={`${d.client} · ${d.industry}`}
+  summary={d.summary}
+  meta={[
+    { k: 'Client', v: d.client },
+    { k: 'Role', v: d.role },
+    d.employer === 'Freelance' ? { k: 'Engagement', v: 'Freelance' } : { k: 'Delivered via', v: d.employer },
+    { k: 'Period', v: d.period },
+    ...(d.clouds.length ? [{ k: 'Cloud', v: d.clouds.join(' · ') }] : []),
+  ]}
+  metrics={d.metrics}
+  stack={d.stack}
+  repo={d.repo}
+  diagram={d.diagram}
+  diagramAlt={d.diagramAlt}
+  headings={headings}
+  prev={prev}
+  next={next}
+  jsonLd={jsonLd}
+  ogImage={`/og/work/${entry.id}.png`}
+>
+  <Content />
+  <p class="sig mono">— {profile.name}</p>
+</ArticleLayout>
+
+<style>
+  .sig {
+    margin-top: 3rem;
+    font-size: 0.8rem;
+    color: var(--fg-faint);
+  }
+</style>

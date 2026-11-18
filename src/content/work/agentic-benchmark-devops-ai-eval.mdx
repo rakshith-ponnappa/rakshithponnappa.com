@@ -1,0 +1,81 @@
+---
+title: "Sandboxed environments for training and evaluating computer-use AI agents"
+client: "Turing (contract)"
+industry: "AI agent training & evaluation"
+employer: "Turing"
+period: "Sep – Nov 2026 (contract)"
+role: "DevOps Engineer, AI Agent Training Platform"
+summary: "On an AI agent training and benchmark platform for a frontier AI lab, I built and ran the sandboxed desktop environments where computer-use agents are trained and evaluated: the desktop image, the evaluation harness port to a new sandbox provider, the provider migration analysis, conformance and security testing of the sandboxes, and the delivery path from develop to staging on Cloud Run."
+clouds: ["GCP"]
+stack: ["Agent sandboxes", "Linux desktop images (GNOME, arm64)", "Docker", "GCP Cloud Run", "Jenkins", "GitHub Actions", "Terraform", "Python", "Network egress policy", "Codeforces-style tasks"]
+metrics:
+  - { value: "1 → 2", label: "sandbox providers the evaluation harness runs on" }
+  - { value: "9", label: "test areas in the sandbox conformance & security suite" }
+  - { value: "develop + staging", label: "environments stood up on Cloud Run" }
+diagram: "/diagrams/agentic-benchmark-devops-ai-eval.svg"
+diagramAlt: "A computer-use agent receives a task, operates a sandboxed Linux desktop built from a hardened GNOME image, and is scored by the evaluation harness. The harness runs on managed sandbox providers; a conformance and security suite checks each provider for user journeys, templates, snapshots, egress policy, cloud-metadata access, quotas, Git, PTY, SSH and secrets. Platform changes flow from feature branches through a develop branch and a Cloud Run staging environment to production via Jenkins and GitHub Actions."
+order: 2
+featured: true
+---
+
+## Context
+
+Computer-use agents learn and are scored by operating a real desktop: opening apps, clicking, typing and reading the screen. The platform I worked on trains and benchmarks these agents for a frontier AI lab, so it runs many short-lived **sandboxed desktops**. Each one has to start fast, behave identically every time, and contain whatever the agent does inside it.
+
+On this contract with Turing my part was the infrastructure side of that: the sandbox environments themselves, moving the evaluation harness onto a new managed sandbox provider, proving that provider was safe and fit for purpose, and the delivery path for the platform. Alongside it I produced agentic-coding training data.
+
+## Constraints
+
+- **Reproducibility is the product.** A benchmark score only means something if every agent sees exactly the same desktop. Image drift is a correctness bug, not a cosmetic one.
+- **The agent is untrusted code.** Whatever it runs must stay inside the sandbox: no unexpected network egress, no route to cloud metadata endpoints, no leaked credentials.
+- **Provider claims aren't evidence.** Lifecycle, snapshots, quotas and network policy had to be verified by testing, not taken from documentation.
+- **A live platform.** Researchers depend on results while the infrastructure changes, so every change needs a place to fail safely before production.
+- **Confidentiality.** Client and vendor details stay private, so this write-up describes the engineering, not the names.
+
+## What I did
+
+### Sandbox environments for computer-use agents
+
+1. **Built the desktop image.** I built the sandboxed Linux desktop image (GNOME, arm64) that agents operate in, with the tooling the tasks need baked in, so every episode starts from an identical, known state.
+2. **Ported the evaluation harness to a new sandbox provider.** I adapted the harness's provider layer (create, snapshot, execute, observe, tear down) so the same tasks and scoring run on a second managed sandbox provider without changing the benchmark.
+3. **Ran the provider migration analysis and proof of concept.** I wrote the requirements, compared feature parity and operating model, and built the proof of concept that showed what a migration would involve and where the gaps were.
+4. **Tested the sandboxes as a black box.** I built a conformance and security suite covering nine areas: end-to-end user journeys and templates, snapshots, **network egress policy**, **cloud-metadata probes**, quotas and stress, Git, PTY, SSH, and secrets handling. Every run captured evidence, so findings went to the vendor as reproducible reports, and I retested their fixes before signing off.
+
+### Platform delivery
+
+5. **Develop branch and staging on Cloud Run.** On GCP Cloud Run, with Jenkins and GitHub Actions in the delivery path, I stood up a develop branch and a staging environment, so changes integrate and run somewhere production-like before release.
+6. **Designed the dev environment.** I wrote the dev-environment design note and drafted the Terraform for it: bootstrap, dev and prod environments, and shared modules.
+
+### Agentic-coding training data
+
+7. **Built training tasks that hold up.** I refined LLM-generated, Codeforces-style problems for clarity, constraints and correctness. I validated brute-force and optimal reference solutions against each other, wrote reasoning traces and metadata, and built Docker test suites and plagiarism checks for each task.
+
+## Key decisions
+
+| Decision | Why | Trade-off |
+|---|---|---|
+| Bake the desktop into a versioned image | Identical start state for every episode is what makes scores comparable. | Image builds to maintain, and every change goes through a rebuild. |
+| Abstract the provider behind the harness | The benchmark shouldn't care which sandbox runs it, so providers can be swapped or run side by side. | An interface to keep honest as providers differ in what they support. |
+| Black-box tests with captured evidence | Verifies behaviour the platform actually depends on, and gives a vendor something reproducible to fix. | More upfront work than a checklist review. |
+| Egress and metadata probes as first-class tests | An agent that can reach the network or cloud metadata unexpectedly is a security incident, not a flaky test. | Probes must be precise enough to avoid false alarms. |
+| Pair a develop branch with a staging environment | Integration problems surface in staging, not in front of the researchers using the results. | Another environment to keep in step with production. |
+
+### Why sandbox testing is platform engineering
+
+Sandboxes for AI agents fail the same way any multi-tenant platform does: an isolation boundary that leaks, a quota that behaves differently at the edge, a snapshot that doesn't restore what you think. The answer is also the same: define the contract, test it from outside, keep the evidence, and don't trust a fix until it passes the same test. I've since published a vendor-neutral version of the approach as the [agent-sandbox-conformance-kit](/projects/agent-sandbox-conformance-kit/).
+
+## Outcome
+
+- Computer-use agents run in a **reproducible, hardened desktop image**.
+- The evaluation harness runs on **a second managed sandbox provider**, backed by a migration analysis and proof of concept.
+- A **nine-area conformance and security suite** with captured evidence; findings reported to the vendor and fixes retested.
+- The platform gained a **develop branch and a Cloud Run staging environment**, and a designed, Terraform-backed dev environment.
+- **Agentic-coding training tasks** delivered with validated solutions, reasoning traces and Docker test suites.
+
+I'm not quoting client names, task volumes or scores; the deliverables were the environments, the tests and a safer release path.
+
+## What I'd do next
+
+- **Run the conformance suite in CI against every provider**, nightly, so a provider regression shows up before an evaluation run does.
+- **Promote images by digest.** Build each desktop image once and promote the same digest from staging to production.
+- **Per-pull-request previews.** Cloud Run revision tags give each change its own URL without taking traffic.

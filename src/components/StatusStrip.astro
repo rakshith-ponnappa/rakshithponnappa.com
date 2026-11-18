@@ -1,0 +1,95 @@
+---
+// Compact status strip for the home page: computed overall state plus the last N deploy bars. Links to /status/.
+import { getStatus, slots, describeEntry, entryState, STATE_TONE } from '../lib/status';
+
+interface Props {
+  n?: number;
+}
+const { n = 30 } = Astro.props;
+const s = await getStatus();
+const list = slots(s.history, n, s.sha);
+const recent = s.history.slice(-n);
+const passing = recent.filter((e) => entryState(e) === 'ok').length;
+const W = 6;
+const GAP = 3;
+const H = 22;
+---
+
+<a class="status-strip" href="/status/" data-state={s.overall.status}>
+  <span class="head">
+    <span class="dot" data-tone={STATE_TONE[s.overall.status]}></span>
+    <span class="headline">{s.overall.headline}</span>
+  </span>
+  <svg
+    class="bars"
+    viewBox={`0 0 ${n * (W + GAP) - GAP} ${H}`}
+    preserveAspectRatio="none"
+    role="img"
+    aria-label={`Last ${n} deploy slots: ${recent.length} recorded, ${passing} passing gates`}
+  >
+    {
+      list.map((sl, i) => (
+        <rect x={i * (W + GAP)} y="0" width={W} height={H} rx="1.5" data-state={sl.state}>
+          <title>{sl.entry ? describeEntry(sl.entry) : 'No data'}</title>
+        </rect>
+      ))
+    }
+  </svg>
+  <span class="meta mono">{passing}/{recent.length} builds passing · status →</span>
+</a>
+
+<style>
+  .status-strip {
+    display: grid;
+    grid-template-columns: auto minmax(8rem, 1fr) auto;
+    align-items: center;
+    gap: 0.75rem 1.25rem;
+    padding: 0.85rem 1.1rem;
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius);
+    background: var(--bg-raised);
+    transition: border-color var(--t-2) var(--ease-out);
+  }
+  .status-strip:hover {
+    border-color: color-mix(in oklch, var(--fg) 25%, var(--line));
+  }
+  .head {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.65rem;
+    font-weight: 560;
+    font-size: 0.92rem;
+    white-space: nowrap;
+  }
+  .dot[data-tone='red'] {
+    --c: var(--red);
+  }
+  .bars {
+    display: block;
+    width: 100%;
+    height: 1.4rem;
+  }
+  rect {
+    fill: color-mix(in oklch, var(--fg-faint) 32%, var(--bg-raised));
+  }
+  rect[data-state='ok'] {
+    fill: var(--signal);
+  }
+  rect[data-state='degraded'] {
+    fill: var(--amber);
+  }
+  .meta {
+    font-size: 0.72rem;
+    color: var(--fg-muted);
+    white-space: nowrap;
+  }
+  @media (max-width: 640px) {
+    .status-strip {
+      grid-template-columns: 1fr auto;
+    }
+    .bars {
+      grid-column: 1 / -1;
+      grid-row: 2;
+    }
+  }
+</style>

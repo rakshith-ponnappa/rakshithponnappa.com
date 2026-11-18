@@ -1,0 +1,226 @@
+---
+import type { CollectionEntry } from 'astro:content';
+import Icon from './Icon.astro';
+
+interface Props {
+  items: CollectionEntry<'projects'>[];
+  filter?: boolean;
+  id?: string;
+}
+const { items, filter = true, id = 'catalog' } = Astro.props;
+const cats = [
+  { v: 'all', label: 'All', n: items.length },
+  { v: 'ai', label: 'AI systems', n: items.filter((p) => p.data.category === 'ai').length },
+  { v: 'platform', label: 'Platform', n: items.filter((p) => p.data.category === 'platform').length },
+  { v: 'tools', label: 'Tools', n: items.filter((p) => p.data.category === 'tools').length },
+].filter((c) => c.n > 0);
+const tone = { ai: 'signal', platform: 'azure', tools: 'amber' } as const;
+const catLabel = { ai: 'AI system', platform: 'Platform', tools: 'Tool' } as const;
+const isSlug = (t: string) => /^[a-z0-9-]+$/.test(t);
+---
+
+<div class="catalog" id={id}>
+  {
+    filter && (
+      <fieldset class="filters" aria-label="Filter projects">
+        {cats.map((c, i) => (
+          <label>
+            <input type="radio" name={`${id}-cat`} value={c.v} checked={i === 0} data-cat-filter={c.v} />
+            <span>
+              {c.label} <span class="n mono">{c.n}</span>
+            </span>
+          </label>
+        ))}
+      </fieldset>
+    )
+  }
+  <ul class="cards">
+    {
+      items.map((p) => (
+        <li data-cat={p.data.category} class="reveal">
+          <article class="card glow pcard">
+            <header>
+              <span class="chip" data-tone={tone[p.data.category]}>
+                {catLabel[p.data.category]}
+              </span>
+              <span class="state mono">
+                <span class="dot" data-tone={p.data.status === 'archived' ? 'muted' : undefined} />
+                {p.data.status === 'archived' ? `archived · ${p.data.year}` : p.data.year}
+              </span>
+            </header>
+            <h3 class:list={[{ slug: isSlug(p.data.title) }]}>
+              <a href={`/projects/${p.id}/`} class="stretched" data-vt={`proj-${p.id}`}>
+                {p.data.title}
+              </a>
+            </h3>
+            <p class="tagline">{p.data.tagline}</p>
+            {p.data.metrics[0] && (
+              <p class="metric mono tabular">
+                <strong>{p.data.metrics[0].value}</strong> {p.data.metrics[0].label}
+              </p>
+            )}
+            <footer>
+              <ul class="stack" aria-label="Stack">
+                {p.data.stack.slice(0, 4).map((s) => (
+                  <li class="chip">{s}</li>
+                ))}
+              </ul>
+              <a class="repo" href={p.data.repo} rel="noopener" aria-label={`${p.data.title} on GitHub`}>
+                <Icon name="github" size={16} />
+              </a>
+            </footer>
+          </article>
+        </li>
+      ))
+    }
+  </ul>
+</div>
+
+<style>
+  .filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-bottom: 1.75rem;
+    border: 0;
+    padding: 0;
+  }
+  .filters label {
+    position: relative;
+  }
+  .filters input {
+    position: absolute;
+    opacity: 0;
+    inset: 0;
+    cursor: pointer;
+  }
+  .filters label > span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.9rem;
+    border-radius: 999px;
+    border: 1px solid var(--line-soft);
+    font-size: 0.88rem;
+    color: var(--fg-muted);
+    transition: all var(--t-2) var(--ease-out);
+  }
+  .filters .n {
+    font-size: 0.7rem;
+    color: var(--fg-faint);
+  }
+  .filters input:checked + span {
+    background: var(--fg);
+    color: var(--bg);
+    border-color: var(--fg);
+  }
+  .filters input:checked + span .n {
+    color: color-mix(in oklch, var(--bg) 60%, var(--fg));
+  }
+  .filters input:focus-visible + span {
+    outline: 2px solid var(--signal);
+    outline-offset: 2px;
+  }
+  .catalog:has([data-cat-filter='ai']:checked) li[data-cat]:not([data-cat='ai']),
+  .catalog:has([data-cat-filter='platform']:checked) li[data-cat]:not([data-cat='platform']),
+  .catalog:has([data-cat-filter='tools']:checked) li[data-cat]:not([data-cat='tools']) {
+    display: none;
+  }
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 330px), 1fr));
+    gap: 1rem;
+  }
+  .pcard {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+    padding: 1.4rem;
+    transition:
+      transform var(--t-3) var(--ease-out),
+      border-color var(--t-3);
+  }
+  .pcard:hover {
+    transform: translateY(-2px);
+  }
+  .pcard header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .state {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-size: 0.72rem;
+    color: var(--fg-faint);
+  }
+  .state .dot {
+    width: 6px;
+    height: 6px;
+  }
+  h3 {
+    font-size: 1.3rem;
+    letter-spacing: -0.02em;
+  }
+  h3.slug {
+    font-family: var(--font-mono);
+    font-size: 1.08rem;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    overflow-wrap: break-word;
+  }
+  .stretched::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+  }
+  .tagline {
+    color: var(--fg-muted);
+    font-size: 0.95rem;
+    line-height: 1.55;
+  }
+  .metric {
+    font-size: 0.78rem;
+    color: var(--fg-faint);
+  }
+  .metric strong {
+    color: var(--signal);
+    font-weight: 500;
+    margin-right: 0.25rem;
+  }
+  footer {
+    margin-top: auto;
+    padding-top: 0.5rem;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+  .stack {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+  }
+  .repo {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    place-items: center;
+    width: 2.1rem;
+    height: 2.1rem;
+    border-radius: 999px;
+    border: 1px solid var(--line-soft);
+    color: var(--fg-muted);
+    flex: none;
+    transition:
+      color var(--t-2),
+      border-color var(--t-2);
+  }
+  .repo:hover {
+    color: var(--fg);
+    border-color: var(--fg-faint);
+  }
+</style>

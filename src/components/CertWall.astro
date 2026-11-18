@@ -1,0 +1,218 @@
+---
+import { certifications, education, courses } from '../data/profile';
+
+interface Props {
+  full?: boolean;
+}
+const { full = false } = Astro.props;
+const groups = ['AI', 'Cloud', 'Platform', 'Specialty'] as const;
+const list = full ? certifications : certifications.filter((c) => c.featured);
+const rest = certifications.length - list.length;
+---
+
+<div class:list={['certs', { full }]}>
+  {
+    full ? (
+      groups.map((g) => (
+        <section class="group" aria-labelledby={`cg-${g}`}>
+          <h2 id={`cg-${g}`} class="eyebrow">
+            {g} <span class="mono n">{certifications.filter((c) => c.group === g).length}</span>
+          </h2>
+          <ul class="wall">
+            {certifications
+              .filter((c) => c.group === g)
+              .map((c) => (
+                <li class="badge reveal" data-issuer={c.issuer}>
+                  <span class="issuer mono">{c.issuer}</span>
+                  <span class="nm">{c.name}</span>
+                  {c.code && <span class="code mono">{c.code}</span>}
+                </li>
+              ))}
+          </ul>
+        </section>
+      ))
+    ) : (
+      <ul class="wall">
+        {list.map((c) => (
+          <li class="badge reveal" data-issuer={c.issuer}>
+            <span class="issuer mono">{c.issuer}</span>
+            <span class="nm">{c.name}</span>
+            {c.code && <span class="code mono">{c.code}</span>}
+          </li>
+        ))}
+        <li class="badge more">
+          <a href="/credentials/">
+            <span class="nm">+{rest} more</span>
+            <span class="issuer mono">View all credentials →</span>
+          </a>
+        </li>
+      </ul>
+    )
+  }
+  {
+    full && (
+      <section class="group" aria-labelledby="edu">
+        <h2 id="edu" class="eyebrow">
+          Education
+        </h2>
+        <ul class="edu">
+          {education.map((e) => (
+            <li>
+              <span class="nm">{e.degree}</span>
+              <span class="sch">{e.school}</span>
+              <span class="mono yr">{e.year}</span>
+            </li>
+          ))}
+          {courses.map((c) => (
+            <li>
+              <span class="nm">
+                {c.name} <span class="chip">Additional course</span>
+              </span>
+              <span class="sch">{c.provider}</span>
+              <span class="mono yr">{c.year}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
+    )
+  }
+</div>
+
+<style>
+  .certs.full {
+    display: grid;
+    gap: 3rem;
+  }
+  .group h2 {
+    margin-bottom: 1rem;
+    display: flex;
+    gap: 0.6rem;
+    align-items: center;
+  }
+  .n {
+    color: var(--fg-faint);
+  }
+  .wall {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr));
+    gap: 0.75rem;
+  }
+  .certs:not(.full) .wall {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+  }
+  .badge {
+    --c: var(--fg-faint);
+    position: relative;
+    display: grid;
+    align-content: start;
+    gap: 0.4rem;
+    min-height: 7.5rem;
+    padding: 1.1rem 1.15rem;
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius);
+    background: linear-gradient(160deg, color-mix(in oklch, var(--c) 9%, var(--bg-raised)), var(--bg-raised) 55%);
+    overflow: hidden;
+  }
+  .badge::after {
+    content: '';
+    position: absolute;
+    right: 14px;
+    top: 14px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 1px solid color-mix(in oklch, var(--c) 45%, transparent);
+    box-shadow: 0 0 0 5px color-mix(in oklch, var(--c) 8%, transparent);
+  }
+  .badge[data-issuer='AWS'] {
+    --c: var(--amber);
+  }
+  .badge[data-issuer='Microsoft'] {
+    --c: var(--azure);
+  }
+  .badge[data-issuer='Google Cloud'] {
+    --c: var(--rose);
+  }
+  .badge[data-issuer='CNCF'],
+  .badge[data-issuer='HashiCorp'] {
+    --c: var(--violet);
+  }
+  .badge[data-issuer='VMware'],
+  .badge[data-issuer='Red Hat'],
+  .badge[data-issuer='Palo Alto'],
+  .badge[data-issuer='AXELOS'] {
+    --c: var(--signal);
+  }
+  .issuer {
+    font-size: 0.7rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--c);
+  }
+  .nm {
+    font-weight: 560;
+    line-height: 1.3;
+    letter-spacing: -0.01em;
+  }
+  .code {
+    margin-top: auto;
+    font-size: 0.72rem;
+    color: var(--fg-faint);
+  }
+  .more {
+    border-style: dashed;
+    background: transparent;
+  }
+  .more::after {
+    display: none;
+  }
+  .more a {
+    display: grid;
+    align-content: center;
+    justify-items: start;
+    gap: 0.4rem;
+    height: 100%;
+  }
+  .more .nm {
+    font-size: var(--step-2);
+    letter-spacing: -0.03em;
+    line-height: 1;
+  }
+  .more .issuer {
+    color: var(--fg-muted);
+    text-transform: none;
+    letter-spacing: 0;
+  }
+  .more:hover {
+    border-color: var(--signal);
+  }
+  .edu {
+    display: grid;
+    border-top: 1px solid var(--line-soft);
+  }
+  .edu li {
+    display: grid;
+    grid-template-columns: minmax(0, 1.3fr) minmax(0, 1.3fr) 12ch;
+    gap: 1rem;
+    align-items: baseline;
+    padding: 1rem 0;
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .sch {
+    color: var(--fg-muted);
+  }
+  .yr {
+    font-size: 0.8rem;
+    color: var(--fg-faint);
+    text-align: end;
+  }
+  @media (max-width: 720px) {
+    .yr {
+      text-align: start;
+    }
+    .edu li {
+      grid-template-columns: 1fr;
+      gap: 0.2rem;
+    }
+  }
+</style>

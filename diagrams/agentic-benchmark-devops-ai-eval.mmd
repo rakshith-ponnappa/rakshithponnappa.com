@@ -1,0 +1,27 @@
+flowchart TD
+  subgraph RUN["Agent training & evaluation episode"]
+    direction LR
+    TASK["Task"] --> AGENT["Computer-use agent"]
+    AGENT -- "click · type · read screen" --> DESK["Sandboxed Linux desktop<br/>GNOME arm64 image · identical start state"]
+    DESK --> SCORE["Evaluation harness<br/>scores the episode"]
+  end
+  subgraph PROV["Sandbox providers behind one harness"]
+    direction LR
+    P1["Managed sandbox provider A"]
+    P2["Managed sandbox provider B<br/>harness port · migration PoC"]
+  end
+  subgraph SUITE["Conformance & security suite · evidence captured"]
+    direction LR
+    T1["Journeys · templates<br/>snapshots"]
+    T2["Egress policy<br/>cloud-metadata probes"]
+    T3["Quotas · stress<br/>PTY · SSH · Git · secrets"]
+  end
+  subgraph DEL["Platform delivery · Jenkins + GitHub Actions"]
+    direction LR
+    FB["Feature branches"] --> DEV["develop"]
+    DEV --> STG["Staging · Cloud Run"]
+    STG -- "verified" --> PRD["Production · Cloud Run"]
+  end
+  RUN --> PROV
+  SUITE -- "verify before trust · retest fixes" --> PROV
+  DEL --> RUN

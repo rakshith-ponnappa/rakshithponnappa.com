@@ -1,0 +1,28 @@
+flowchart TD
+  subgraph BEFORE["Before"]
+    direction LR
+    ADO["Azure DevOps pipeline<br/>Terraform CLI on agents"]
+    MONO["One workspace · one state<br/>35,000 resources · 5 apps<br/>shared + DR"]
+    ADO --> MONO
+  end
+  subgraph CARVE["Carve · one application at a time · smallest first"]
+    direction LR
+    FRZ["Freeze + lock<br/>state pull snapshot"]
+    SPL["Split addresses offline<br/>count check · new lineage"]
+    PSH["Push slice to new workspace<br/>remove from source"]
+    ZERO["Zero-change plan<br/>on both sides"]
+    FRZ --> SPL
+    SPL --> PSH
+    PSH --> ZERO
+    ZERO -. "any diff → restore snapshot" .-> FRZ
+  end
+  subgraph AFTER["After · Terraform Enterprise + Harness"]
+    direction LR
+    PLAT["Platform workspace<br/>Key Vault · DES · diagnostics<br/>RSV · ASR append-only batches"]
+    APPS["Per-app workspace + repo<br/>+ Harness pipeline · x5"]
+    GOV["OPA policy · branch protection<br/>code owners · 12 governance tags"]
+    PLAT -- "data sources · read-only" --> APPS
+    APPS --- GOV
+  end
+  BEFORE --> CARVE
+  CARVE --> AFTER

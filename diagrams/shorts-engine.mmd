@@ -1,0 +1,15 @@
+flowchart LR
+    T["Trends<br/>YouTube Data API"] --> H
+    RR["Rights registry<br/>own / licensed + permission_ref"] --> S["Sources<br/>data/inbox, yt-dlp"]
+    S --> W["Whisper transcript<br/>faster-whisper"]
+    W --> H["Highlights<br/>20-58 s windows<br/>heuristics + optional LLM"]
+    T --> O["AI originals<br/>LLM script + TTS"]
+    H --> G{"Guardrails<br/>rights, time overlap,<br/>Jaccard shingles, titles"}
+    O --> G
+    G -->|"rejected"| X["Dropped"]
+    G -->|"passed"| RN["Render 9:16<br/>ffmpeg + libass captions"]
+    RN --> Q{"Human review<br/>AI originals only"}
+    Q -->|"approved or clip"| U["Private scheduled upload<br/>ramp 1 to 3 per day"]
+    U --> ST["Stats<br/>last 14 days"]
+    ST --> T
+    DB["SQLite state"] -.- G

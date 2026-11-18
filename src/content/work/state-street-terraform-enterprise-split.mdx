@@ -1,0 +1,95 @@
+---
+title: "Splitting 35,000 Terraform resources into per-app state, with zero reboots"
+client: "State Street (PFI)"
+industry: "Financial services"
+employer: "Ensono"
+period: "2026"
+role: "Lead architect, end to end (state design, carve method, pipeline and TFE migration)"
+summary: "State Street's whole Azure estate (35,000 Terraform resources across five applications) lived in one state file. Plans were slow, locks were shared and every change put the whole estate at risk. I designed and led the split into one state, workspace, repository and pipeline per application, moving delivery from Azure DevOps to Harness and Terraform runs into Terraform Enterprise, without recreating or rebooting a production VM."
+clouds: ["Azure"]
+stack: ["Terraform Enterprise", "Terraform state surgery", "OPA policy", "Harness", "Azure DevOps", "Azure Site Recovery", "Key Vault & disk encryption sets", "Git branch protection"]
+metrics:
+  - { value: "35,000", label: "Terraform resources carved out of a single state" }
+  - { value: "1 → 5", label: "monolithic workspace split into per-application workspaces" }
+  - { value: "0", label: "production VMs recreated or rebooted by the carve" }
+  - { value: "0", label: "planned changes required after each carve" }
+diagram: "/diagrams/state-street-terraform-enterprise-split.svg"
+diagramAlt: "Before: one Terraform workspace driven by Azure DevOps holds 35,000 resources for five applications plus shared and DR resources. The carve freezes the workspace, pulls a state snapshot, splits resource addresses by application, pushes each slice to its own Terraform Enterprise workspace and verifies a zero-change plan. After: a shared platform workspace (key vaults, disk encryption sets, diagnostics storage, the DR vault and replication) and one workspace, repository and Harness pipeline per application, each reading shared resources through data sources and gated by OPA policy and branch protection."
+order: 3
+featured: true
+---
+
+## Context
+
+After the [data-centre exit](/work/state-street-azure-landing-zone-dr/), State Street's PFI estate was healthy but held in **one Terraform state**. That single workspace held about **35,000 resources** across five applications: VMs, disk encryption sets, NICs, load balancers, SQL Managed Instances, Oracle, Key Vault wiring and the Azure Site Recovery estate. Delivery ran through Azure DevOps pipelines. That shape had stopped scaling:
+
+- **Every plan refreshed everything.** A one-line change to one application meant refreshing all 35,000 resources, so plans were slow and noisy.
+- **One lock for five teams.** Only one run could hold the state, so unrelated changes queued behind each other.
+- **The blast radius was the whole estate.** A bad variable or module bump for one application showed up in a plan that touched all five.
+- **Hard to review and to govern.** Huge plans hide the one change that matters, and policy checks ran against the whole estate every time.
+
+I owned the split end to end: target design, the carve method, the pilot, and the move of pipelines and runs to Harness and Terraform Enterprise.
+
+## Constraints
+
+- **No production impact.** The VM modules carry provisioners (`null_resource` with triggers) that restart or reconfigure VMs when they are created. Any approach that recreated them would reboot production.
+- **Policy says no.** OPA policy on Terraform Enterprise blocks plans that forget or destroy managed resources, so `removed` blocks plus `import` in the new workspaces weren't an option. Rightly so: that pattern briefly leaves resources unmanaged.
+- **`moved` only works inside one state.** Terraform's refactoring blocks can't move resources between workspaces.
+- **Shared resources stay shared.** Key vaults, disk encryption sets, the boot-diagnostics storage account and the DR estate (Recovery Services Vault, replication policy and fabric) are used by every application and had to keep exactly one owner.
+- **DR ordering is append-only.** VMs are batched into ASR replication groups of 16 by list position. Re-ordering the list would reshuffle protected VMs between recovery plans.
+- **Regulated change.** Every step needed a reviewed plan, an approval and a rollback.
+
+## What I did
+
+1. **Mapped every address to an owner.** I classified all 35,000 resource addresses by application (module keys, tags and naming) and by role: *app-owned*, *shared platform* or *DR*. I also listed every cross-application reference. This map drove the whole split.
+2. **Designed the target layout.**
+   - **Shared platform workspace:** key vaults, disk encryption sets, diagnostics storage and the whole DR estate, so the ASR batch order stays in one place and untouched.
+   - **One workspace, repository and pipeline per application:** each application's VMs, data tier, load balancers and app-level wiring.
+   - **Data sources, not references:** application workspaces read shared resources through `data` sources (and published outputs), so no application can change a shared resource by accident.
+3. **Designed the carve: state surgery, not re-import.** For each application:
+   - **Freeze:** lock the source workspace and stop the pipelines.
+   - **Snapshot:** run `terraform state pull`, keep a versioned backup and record the serial.
+   - **Split:** move that application's addresses into a new state file offline, check resource counts against the address map and set fresh lineage for the new state.
+   - **Push:** the platform team pushes the slice to the new Terraform Enterprise workspace (state-write permissions held by them), then the carved addresses are removed from the source.
+   - **Verify:** both workspaces must plan **zero changes** before anything unlocks. Any diff means the snapshot is restored.
+
+   Resources move verbatim and nothing is recreated, so no provisioner fires and no VM reboots.
+4. **Piloted with the smallest application, then carved the rest.** I proved the full carve, the data-source swaps and a zero-change plan on the smallest application, then carved the remaining four the same way.
+5. **Moved delivery from Azure DevOps to Harness.** Every application got its own Harness pipeline:
+   - pull request → speculative plan in Terraform Enterprise → OPA policy check → approval → apply, through the TFE API;
+   - Azure DevOps service connections, variable groups and secrets became Harness connectors, variables and secret references.
+6. **Moved Terraform execution into Terraform Enterprise.** Before, Azure DevOps agents ran the Terraform CLI against one big workspace. Now plans and applies execute inside per-application TFE workspaces, with their own run history, policy sets attached per workspace and shared settings in variable sets. The pipeline orchestrates; it no longer runs Terraform itself.
+7. **Put guardrails on the new shape.**
+   - **Branch protection and code owners** on every repository.
+   - **12 mandatory governance tags** enforced by policy.
+   - **Shared-resource changes go only through the platform workspace.**
+   - **The ASR list stays append-only**, documented in the runbook.
+
+## Key decisions
+
+| Decision | Why | Trade-off |
+|---|---|---|
+| Carve state instead of re-importing | Re-import would recreate provisioners and reboot production VMs, and `removed` + `import` is blocked by policy. Carving keeps every resource as-is. | Needs platform-team state permissions, a frozen workspace and careful offline handling of the state. |
+| Zero-change plan as the exit gate | It is the only objective proof that the carve lost nothing and changed nothing. | A diff of even one resource means rolling back and repeating. |
+| Shared and DR resources in one platform workspace | One owner for keys, encryption, diagnostics and DR, and the ASR batch order can't drift. | Application teams depend on platform outputs and their release cadence. |
+| Data sources between workspaces | Applications read shared resources but can't change them. The coupling is explicit and one-way. | A shared-resource rename has to be co-ordinated across workspaces. |
+| Smallest application first | The method is proven where a mistake affects the fewest VMs. | The biggest wins (the largest applications) arrive last. |
+| Migrate pipelines and split state together | Each application lands once on its final shape (own repo, TFE workspace, Harness pipeline) instead of being migrated twice. | A bigger cutover per application, so each one is rehearsed. |
+
+### Why not just `terraform state mv` between workspaces?
+
+With remote state in Terraform Enterprise there is no safe "move between workspaces" button. The source and target are separate state versions with their own lineage and serials. Working on a pulled snapshot, splitting it offline and pushing each slice deliberately turns that into a reviewed, repeatable and reversible operation. The snapshot is the rollback.
+
+## Outcome
+
+- One monolithic state of **35,000 resources** redesigned into **one shared platform workspace plus one workspace, repository and Harness pipeline per application**.
+- **All five applications carved**, each on its own workspace and pipeline, with **no recreated or rebooted VMs** and a **zero-change plan** as the gate for every carve.
+- Delivery moved **from Azure DevOps to Harness**, and Terraform runs **into Terraform Enterprise** with OPA policy per workspace.
+- **Smaller plans, separate locks and per-application blast radius**: one team's change no longer waits on, or risks, another team's estate.
+- Guardrails that keep the shape: branch protection, code owners, governance tags and one owner for shared and DR resources. The [VM factory](/work/state-street-vm-factory-image-bakery/) builds into the same per-application workspaces.
+
+## What I'd do next
+
+- **Automate drift checks.** A scheduled zero-change plan per workspace, with an alert on drift.
+- **Publish module versions.** Move the module library to a private registry with semantic versions, so each application upgrades on its own schedule.
+- **Script the carve.** Turn the runbook into a tested tool (address map in, split states and verification out) for the next estate that needs it.

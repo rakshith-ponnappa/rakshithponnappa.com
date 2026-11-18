@@ -1,0 +1,76 @@
+---
+title: "local-rag-agent-platform"
+repo: "https://github.com/rakshith-ponnappa/local-rag-agent-platform"
+tagline: "A local-first retrieval service where every stage of the RAG pipeline is visible, swappable and measured: ingest, embed, store, search, and retrieval evals that run in CI on every push."
+category: "ai"
+year: 2026
+status: "active"
+stack: ["Python 3.11", "FastAPI", "Ollama", "httpx", "Docker", "pytest", "GitHub Actions"]
+highlights:
+  - "Retrieval quality is a number, not a feeling: Hit@k, Precision@k, Recall@k and MRR on a labelled query set."
+  - "A deterministic hashing embedder makes tests and evals reproducible offline; real Ollama embeddings are one flag away."
+  - "Content-addressed chunk IDs make index rebuilds byte-for-byte reproducible, so eval labels stay valid."
+  - "Typed failure modes: an unreachable LLM is a 502, an empty response a 500, an empty index a 503."
+metrics:
+  - { value: "0.857", label: "Hit@3, offline baseline" }
+  - { value: "0.810", label: "MRR, offline baseline" }
+  - { value: "19", label: "offline pytest tests" }
+  - { value: "14", label: "labelled eval queries" }
+diagram: "/diagrams/local-rag-agent-platform.svg"
+diagramAlt: "Offline pipeline: Markdown docs are chunked into a JSONL file, embedded into a JSON vector index, and scored by a retrieval eval against labelled queries. The FastAPI service embeds incoming search queries and runs them against the same index; the chat endpoint calls Ollama directly, and a health endpoint reports status."
+order: 3
+---
+
+## The problem
+
+Most RAG demos skip the part that matters in production: knowing whether retrieval is any good. A team changes the chunk size or swaps the embedding model, eyeballs three answers, and calls it better. When something regresses there is no baseline to compare against.
+
+I built this to make every moving part of a RAG pipeline small, visible and testable before swapping in production components such as a managed vector database, hosted embeddings or a gateway. It needs no cloud keys.
+
+## How it works
+
+The project has an offline pipeline and an online service, sharing one index.
+
+**Offline:**
+
+1. `rag_ingest` loads `.md` and `.txt` files and splits them into fixed-size character windows with overlap (400 characters with 80 overlap for the sample corpus). Each chunk ID is the first 16 hex characters of a SHA-1 over the relative path, the chunk index and the chunk text.
+2. `index_corpus` embeds the chunks and writes a JSON vector index.
+3. `eval_retrieval` runs every labelled query in `evals/retrieval_eval.json` against the index and averages Hit@k, Precision@k, Recall@k and MRR.
+
+**Online:** a FastAPI app with three endpoints. `GET /health` returns status. `POST /search` embeds the query and returns the top-k chunks (1 to 20) with scores and sources, or 503 if the index is empty. `POST /chat` sends a prompt to Ollama's `/api/generate` through an async client.
+
+Embedders sit behind one `Embedder` protocol. `HashingEmbedder` hashes each token with SHA-1 into one of 256 buckets, counts, and L2-normalises, so it is deterministic and needs no model. `OllamaEmbedder` calls a local model such as `nomic-embed-text`. The vector store is a brute-force cosine scan persisted as JSON, which is fine for thousands of chunks.
+
+The Docker image runs as a non-root user and builds the sample index at image build time.
+
+## Engineering decisions
+
+**Evals before features.** The eval was there from the start and CI re-runs it on every push. A retrieval change only counts as an improvement if the numbers move. The metrics are pure functions with their own unit tests, so the measuring stick is itself tested.
+
+**A deterministic embedder for CI.** Downloading an embedding model in CI is slow and makes results drift with model versions. The hashing embedder gives a stable baseline. It is a bag of hashed words, so it measures lexical overlap rather than meaning, but it is good enough to catch a chunking regression. Comparing embedders is the point of having a baseline.
+
+**Reproducible chunk IDs.** Labels in the eval set reference chunk IDs. Because IDs are derived from content and position, rebuilding with the same settings produces the same IDs, and the eval file records the build settings it was labelled against. Change the corpus or chunk size and the labels must be regenerated, which is stated in the file.
+
+**Small, swappable parts.** The embedder, store and LLM client each sit behind a narrow interface, so pgvector, Qdrant or Azure OpenAI can replace them without touching the API.
+
+**Fail loudly.** The LLM client raises typed errors that map to 502 and 500, so a broken dependency shows up in monitoring rather than as an empty answer.
+
+## Results & evidence
+
+Baseline with the offline hashing embedder, k = 3, chunk 400 / overlap 80, over 14 labelled queries:
+
+| Hit@3 | Precision@3 | Recall@3 | MRR |
+|---|---|---|---|
+| 0.857 | 0.310 | 0.857 | 0.810 |
+
+Precision is capped by the labels: 13 of the 14 queries have a single relevant chunk, so the best possible Precision@3 on this set is about 0.357. Read against that ceiling, 0.310 is roughly 87% of the maximum.
+
+**19 offline tests** cover ingestion and chunking, the vector store, the metrics, eval loading and the API, with `/chat` against a mocked LLM and `/search` against a temporary index.
+
+## Limitations & next steps
+
+- **`/chat` is not retrieval-grounded yet.** It is plain generation through Ollama today. The service can retrieve and it can generate, but it does not yet put retrieved chunks into the prompt. That is the top roadmap item: retrieve, build a prompt with citations, generate.
+- **The corpus is small.** Four self-written documents chunk into ten pieces. The baseline proves the harness works; it says little about retrieval at scale.
+- **Brute-force search** will not scale past a few thousand chunks, by design.
+- **The baseline is lexical.** I have not published numbers for the Ollama embedder yet.
+- **Next:** cross-encoder reranking and hybrid BM25 plus vector search, OpenTelemetry traces with token and latency metrics, a Helm chart with an Ollama sidecar or GPU node pool, and `/search` exposed as an MCP tool for agents.

@@ -1,0 +1,13 @@
+flowchart TD
+    A["Plan the upgrade path<br/>required stops, grouped windows"] --> B["Pre-checks<br/>precheck-collect.sh before"]
+    B --> C["Backup<br/>gitlab-backup + secrets +<br/>gitlab.rb + VM snapshot"]
+    C --> D["Install one hop<br/>pinned package version"]
+    D --> E{"Post-checks<br/>gitlab:check, smoke tests"}
+    E -->|"fail"| R["Rollback<br/>snapshot or same-version restore"]
+    E -->|"pass"| F{"Background migrations<br/>queue at zero?"}
+    F -->|"no"| W["Wait or finalize"]
+    W --> F
+    F -->|"yes"| EV["Collect after evidence<br/>diff before vs after"]
+    EV --> G{"More required stops?"}
+    G -->|"yes"| B
+    G -->|"no"| H["Final validation<br/>runners, LDAP, integrations,<br/>sign-off"]

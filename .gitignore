@@ -1,0 +1,40 @@
+# build output
+dist/
+# generated types
+.astro/
+
+# dependencies
+node_modules/
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+
+# environment variables
+.env
+.env.production
+
+# macOS-specific files
+.DS_Store
+
+# jetbrains setting folder
+.idea/
+
+# local build/test scratch
+.build-assets/
+.scratch/
+.wrangler/
+.wrangler-dry/
+.dev.vars
+
+# QA suite scratch output
+.build-qa/
+test-results/
+playwright-report/
+blob-report/
+
+# local build output dirs (.build-main, .build-qa-b, …)
+.build-*/

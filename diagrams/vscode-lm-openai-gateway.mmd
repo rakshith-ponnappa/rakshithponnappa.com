@@ -1,0 +1,15 @@
+flowchart LR
+    C["OpenAI-compatible client<br/>curl, OpenAI SDK, agents"] -->|"HTTP + Bearer token"| S
+    subgraph VSC["VS Code extension host"]
+        S["HTTP server<br/>127.0.0.1:8787/v1<br/>no CORS"] --> A{"Auth + limits<br/>timingSafeEqual<br/>20 MB body cap"}
+        A -->|"reject"| ERR["OpenAI-style error<br/>401 / 413"]
+        A -->|"GET /v1/models"| LM["List copilot-vendor models"]
+        A -->|"POST /v1/chat/completions"| T["Translate messages, tools,<br/>tool_choice, reasoning_effort"]
+        T --> L["vscode.lm<br/>sendRequest + cancellation"]
+        L --> COL["Collect text + tool-call parts<br/>no streaming"]
+        COL --> R["chat.completion<br/>content or tool_calls"]
+        LOG["Output channel<br/>method, path, status,<br/>model, latency only"]
+    end
+    L --> M["Chat model<br/>e.g. GitHub Copilot"]
+    R --> C
+    S -.-> LOG

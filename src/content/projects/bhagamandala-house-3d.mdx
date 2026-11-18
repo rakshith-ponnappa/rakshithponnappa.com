@@ -1,0 +1,76 @@
+---
+title: "bhagamandala-house-3d"
+repo: "https://github.com/rakshith-ponnappa/bhagamandala-house-3d"
+tagline: "An interactive Three.js walkthrough of a G+1 house inspired by Kodagu's Ainmane heritage, with a Python pipeline that regenerates plan images and multilingual PDFs and a GitHub Pages deployment."
+category: "tools"
+year: 2026
+status: "active"
+stack: ["Three.js r0.164.1", "WebGL", "Vanilla HTML/CSS/JS", "Python", "Pillow", "matplotlib", "fpdf2", "GitHub Actions", "GitHub Pages"]
+highlights:
+  - "A single-file WebGL viewer with no build step: orbit, fly-to rooms, X-ray walls, exploded view and day/night."
+  - "Procedural canvas textures for laterite, wood, Kota stone and roof tiles instead of downloaded image assets."
+  - "One Python pipeline regenerates six plan images and the PDF set, then checks the 3D model is in sync."
+  - "Plans documented in English, Kannada and Malayalam for everyone involved in the build."
+metrics:
+  - { value: "18", label: "rooms modelled across two floors" }
+  - { value: "~2,909 sq ft", label: "built-up area, G+1" }
+  - { value: "3", label: "documentation languages" }
+  - { value: "6", label: "generated plan and elevation images" }
+diagram: "/diagrams/bhagamandala-house-3d.svg"
+diagramAlt: "Room data and design specs feed two paths. The Python pipeline runs the plan generator (Pillow and matplotlib) for floor plans and elevations, the PDF generator (fpdf2) for English, Kannada and Malayalam documents, a 3D sync check against the viewer's room definitions, and a context-document update. The single-file Three.js viewer renders the model with procedural textures, and a GitHub Actions workflow deploys the viewer to GitHub Pages."
+order: 12
+---
+
+## The problem
+
+Designing a family house means explaining one design to very different people: family members who read plans differently, a builder who works from dimensions, and relatives more comfortable in Kannada or Malayalam than in English. Flat drawings did not survive that. People kept asking what a room would actually feel like, which walls are exposed laterite, and what the veranda looks like from the road.
+
+So I treated the design like software. The house is a G+1 residence on a 60 × 50 ft east-facing plot, drawing on the Kodagu Gowda Ainmane tradition: exposed laterite (jambitt kallu) bedroom walls sealed with linseed oil, a 42 × 8 ft jagali veranda on five teak pillars, and a hip-and-gable Mangalore tile roof. I wanted one source of truth that produces a walkable 3D model, printable plans and translated documents.
+
+**Live viewer:** [rakshith-ponnappa.github.io/bhagamandala-house-3d](https://rakshith-ponnappa.github.io/bhagamandala-house-3d/)
+
+## How it works
+
+**The 3D viewer** is a single HTML file of about 925 lines that loads Three.js r0.164.1 and OrbitControls from a CDN. It models 18 rooms (11 on the ground floor, 7 on the first) from a room definition table holding each room's dimensions, wall finish, flooring and orientation. Materials are `MeshStandardMaterial` with procedurally drawn `CanvasTexture`s, so laterite, tile and stone surfaces need no image downloads.
+
+The interface adds:
+
+- floor filters (ground, first, site or all) and camera presets (bird's eye, front, inside the ground floor, sitout);
+- a room panel listing all 18 rooms, where a click flies the camera to the room and opens a detail card with finishes and features;
+- keyboard toggles for reset (`R`), exploded view (`E`), X-ray walls (`X`) and night mode (`N`);
+- a heritage badge on rooms with exposed laterite.
+
+**The pipeline**, `pipeline.py --all`, runs four steps and reports how many succeeded:
+
+1. `generate_plans_v4.py` draws six images (ground and first-floor plans, front and back elevations, roof and site layout) with Pillow and matplotlib.
+2. `generate_pdfs.py` builds the PDF set with fpdf2, including the English, Kannada and Malayalam plan documents.
+3. A sync check counts the room entries in the viewer, compares them against the generator, and warns if the viewer is stale.
+4. The project context document gets a "last pipeline run" timestamp.
+
+`build_website.py` assembles a landing page and copies plan images into `docs/`. A GitHub Actions workflow deploys the viewer to GitHub Pages on every push to `main`.
+
+## Engineering decisions
+
+**No build tooling for the viewer.** A single static file opens from any HTTP server and deploys to Pages with no bundler, which suits a project people visit more than they develop.
+
+**Procedural textures.** Drawing textures on a canvas keeps the repository small and lets me tune colour and pattern in code next to the material that uses them.
+
+**Data-driven rooms.** Every room lives in one table in the viewer, so the room panel, detail cards, fly-to targets and heritage badges all derive from the same data instead of being hand-placed.
+
+**Translations as first-class artefacts.** The Kannada and Malayalam documents are generated outputs, not afterthoughts, because the people who build and live in the house need them.
+
+**Generated outputs are reproducible.** Images and PDFs are regenerated from scripts, so a design change propagates to every artefact in one command.
+
+## Results & evidence
+
+- 18 rooms across two floors, about 2,909 sq ft built up on a 42 × 38 ft footprint including the veranda.
+- Six plan and elevation images and a PDF set in three languages, all regenerated by one command.
+- A deployed, browser-based walkthrough that anyone with the link can explore without installing anything.
+
+## Limitations & next steps
+
+- **Licence.** The design, plans, renders, documents and code are licensed **CC BY-NC-ND 4.0**. You may view and share them with credit, but not use them commercially or create derivative designs. It is source-available for viewing, not open source in the usual sense.
+- **Room data is duplicated.** The viewer and the plan generator each hold their own room definitions, and the "sync" step only counts entries and checks timestamps. A single shared JSON source would make drift impossible rather than merely visible.
+- **No automated tests**, and the pipeline's dependencies are installed by hand rather than pinned.
+- **Older versions sit alongside current ones** (`index_v1.html` in both `3d-viewer/` and `docs/`).
+- **Next:** extract room data into one JSON file consumed by both the viewer and the generators, and add a CI check that the generated artefacts are current.

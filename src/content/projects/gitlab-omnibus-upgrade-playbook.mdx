@@ -1,0 +1,68 @@
+---
+title: "gitlab-omnibus-upgrade-playbook"
+repo: "https://github.com/rakshith-ponnappa/gitlab-omnibus-upgrade-playbook"
+tagline: "A field-tested runbook for multi-hop self-managed GitLab Omnibus upgrades: plan the required stops, gate every hop on evidence, and always keep a tested way back."
+category: "platform"
+year: 2026
+status: "active"
+stack: ["GitLab Omnibus (EE)", "Bundled PostgreSQL", "Bash", "gitlab-rake / gitlab-rails", "ShellCheck", "markdownlint", "GitHub Actions"]
+highlights:
+  - "Background migrations, not the package install, are the gate between hops."
+  - "A read-only evidence collector runs the same 11 checks before and after every hop, so diffs answer audit questions."
+  - "Rollback decision points and a time box are agreed in the change request before the window opens."
+  - "Written for regulated estates with strict, audited access and approved change windows."
+metrics:
+  - { value: "12.x → 19.x", label: "major-version span of the case study" }
+  - { value: "8", label: "runbook chapters" }
+  - { value: "11", label: "evidence checks per hop" }
+  - { value: "2", label: "copy-and-fill templates" }
+diagram: "/diagrams/gitlab-omnibus-upgrade-playbook.svg"
+diagramAlt: "Per-hop loop: plan the upgrade path, run pre-checks and collect evidence, back up with gitlab-backup plus secrets, config and a VM snapshot, install one pinned package version, then run post-checks. A failure leads to rollback. On success, wait until background migrations reach zero, then either repeat for the next required stop or move to final validation of runners, LDAP and integrations."
+order: 8
+---
+
+## The problem
+
+Self-managed GitLab instances drift. A single-node Omnibus install that nobody wanted to touch ends up several major versions behind, and at that point you cannot jump to the current release. Each major version has required upgrade stops. Background database migrations must finish before the next hop. The bundled PostgreSQL gets upgraded along the way. Skip any of that and you risk a broken instance with source code, CI variables and runner tokens inside it.
+
+The case behind this playbook made it harder. It was a regulated financial-services customer on 12.x with strict, audited access. The target was a supported 19.x release with no data loss, every hop inside an approved maintenance window, and evidence for audit. I turned what I learned into a repeatable process.
+
+## How it works
+
+The playbook is eight chapters, two templates and one script.
+
+1. **Plan the path.** Generate the required stops with GitLab's Upgrade Path tool, then group them into maintenance windows of one to a few hops. Treat PostgreSQL and OS milestones as their own stops.
+2. **Pre-check.** Run `scripts/precheck-collect.sh before-<version>`. It writes one file per check into a timestamped folder: version manifest, `gitlab:env:info`, service status, `gitlab:check SANITIZE=true`, `db:migrate:status`, queued batched migrations, legacy background migrations, PostgreSQL version, disk, memory and OS release. Stop if anything fails or migrations are not at zero.
+3. **Back up.** `gitlab-backup create STRATEGY=copy`, plus separate copies of `gitlab-secrets.json` and `gitlab.rb`, plus a VM snapshot before every window.
+4. **Install one pinned version.** Never "latest" from a configured repository, which silently skips required stops.
+5. **Verify.** Service status, `gitlab:check`, zero `down` migrations, the readiness endpoint, then smoke tests: local and LDAP sign-in, clone and push over HTTPS and SSH, a merge request and pipeline, and a runner picking up a job.
+6. **Gate.** Query the batched-migration queue. Zero and nothing failed means collect `after-<version>` evidence and continue. Still running means wait. Failed means retry, finalise or roll back.
+7. **Final validation** once the last stop is done: runners, LDAP and integrations, then sign-off.
+
+## Engineering decisions
+
+**Background migrations are the real gate.** The package install finishing feels like success, but starting the next hop with migrations still running is the most common way to break an upgrade. On some hops the wait was minutes; on others it was an hour or more. The runbook makes the queue count the explicit go/no-go.
+
+**Evidence is the same shape every time.** The collector is read-only, never aborts the whole run on one failed command, and prints a summary of down migrations and queued counts. Running it identically before and after each hop means a diff answers both "what changed?" and the auditor's questions.
+
+**Rollback is decided before the window.** In-place downgrades are not supported, so rollback means returning the whole instance to its pre-hop state. The options are ordered fastest first: VM snapshot, backup restore on the identical version with the saved secrets, or fix forward for a small, understood issue. The change request fixes the decision points in advance (go/no-go after install, migration failure, failed smoke tests) and a time box after which rollback starts without debate.
+
+**Secrets are their own backup.** A `gitlab-backup` without `gitlab-secrets.json` cannot decrypt CI variables, 2FA secrets or runner tokens. The runbook backs it up separately and expects the restore to be tested.
+
+**Operator safety is a chapter, not a footnote.** Bastion sessions time out. Every step runs inside `tmux` or `screen` with a `script` log, so a migration never dies with the operator's session.
+
+**Docs are linted like code.** CI runs markdownlint over the docs and ShellCheck over the script.
+
+## Results & evidence
+
+- The case study spans 12.x to a supported 19.x target, planned as grouped hops, each with a VM snapshot and `gitlab-backup` taken first, and each gated on `gitlab:check` and background migrations reaching zero.
+- What actually took time is recorded honestly: migration waits at certain stops, the bundled PostgreSQL upgrades, and re-registering runners for the newer token workflow.
+- Six lessons learned are written up in the README, from pinning every package version to reindexing PostgreSQL when the OS or glibc version changes.
+- Copy-and-fill hop checklist and change-request templates make the process repeatable by someone other than me.
+
+## Limitations & next steps
+
+- **Guidance, not automation.** It is a runbook with one evidence script. The hops themselves are run by an operator, deliberately, but that means the process is only as consistent as the person following it.
+- **Scoped to single-node and small Omnibus installs.** Multi-node and Helm-chart deployments have different upgrade mechanics.
+- **Version specifics age.** Required stops change with every GitLab release, so the official upgrade documentation stays the source of truth for any exact version.
+- **Next:** turn the gate into a script that blocks on the migration queue and diffs before and after evidence automatically.

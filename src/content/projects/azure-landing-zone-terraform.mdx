@@ -1,0 +1,79 @@
+---
+title: "azure-landing-zone-terraform"
+repo: "https://github.com/rakshith-ponnappa/azure-landing-zone-terraform"
+tagline: "An opinionated, CAF-aligned Azure landing zone in small Terraform modules: management groups and policy, hub-spoke connectivity, subscription vending and a private AKS spoke, with policy-as-code checks in CI."
+category: "platform"
+year: 2026
+status: "active"
+stack: ["Terraform >= 1.6", "azurerm ~> 4.65", "Azure Policy", "Azure Firewall", "AKS (CNI Overlay + Cilium)", "Entra ID workload identity", "GitHub Actions OIDC", "TFLint", "Checkov"]
+highlights:
+  - "A new landing zone is a pull request with a tfvars file, not a portal ticket."
+  - "Spoke stacks create both sides of hub peering through an aliased provider, without Contributor on the hub."
+  - "Private AKS with CNI Overlay and Cilium, firewall-forced egress and Entra ID-only access."
+  - "72 input validation rules make bad CIDRs, SKUs and privileged roles fail at plan, not halfway through apply."
+metrics:
+  - { value: "8", label: "composable Terraform modules" }
+  - { value: "72", label: "variable validation rules" }
+  - { value: "4", label: "CI jobs: fmt, validate, tflint, checkov" }
+  - { value: "0", label: "pipeline secrets (OIDC only)" }
+diagram: "/diagrams/azure-landing-zone-terraform.svg"
+diagramAlt: "A platform stack deploys governance (management groups and policy), management (Log Analytics), hub connectivity (firewall, Bastion, private DNS) and a deploy identity with OIDC. An app team's pull request runs CI checks and then the landing-zone stack, which vends a subscription with a spoke VNet routed to the firewall, peers it to the hub through an aliased provider, and deploys a private AKS cluster whose diagnostics flow to Log Analytics."
+order: 7
+---
+
+## The problem
+
+Every enterprise Azure platform I have built needed the same skeleton: a management-group hierarchy with guardrail policy, a hub network that owns egress and DNS, a repeatable way to hand application teams a subscription, and a secure default for Kubernetes. The reference implementations that exist are thorough, but they are large enough that a team adopting them often cannot say what half the code does.
+
+I wanted the same patterns in modules small enough to read in one sitting, with every name, ID and address a placeholder so the repo can be public.
+
+## How it works
+
+Two example stacks, deployed in order.
+
+**`examples/platform`** composes four modules:
+
+- **`governance`** builds the hierarchy (root, then Platform with Management, Connectivity and Identity; Landing zones with Corp and Online; Sandbox; Decommissioned) and assigns built-in policies: allowed locations, required and inherited resource-group tags, and no public IPs on NICs.
+- **`management`** creates the central Log Analytics workspace, an optional Automation account, and a diagnostic-settings helper.
+- **`connectivity`** builds the hub VNet, Azure Firewall with a DNS proxy and an AKS egress rule collection, Bastion, central private DNS zones and the hub side of peering.
+- **`identity`** creates a user-assigned identity with federated credentials for GitHub Actions OIDC, plus RBAC.
+
+**`examples/landing-zone-aks`** runs once per application. It takes the platform outputs (hub VNet ID, firewall IP, private DNS zone ID, workspace ID) as inputs and composes:
+
+- **`lz-vending`**: optional subscription alias and management-group placement, resource groups, a spoke VNet with NSGs, a route table sending `0.0.0.0/0` to the firewall, peering in both directions, a subscription spend alert, and app-team RBAC.
+- **`aks-spoke`**: a private cluster with CNI Overlay and Cilium, user-defined-route egress through the firewall, local accounts disabled, workload identity, the Azure Policy add-on, Container Insights and control-plane diagnostics including `kube-audit-admin`.
+
+`naming` and `tagging` give every module the CAF naming convention and the mandatory tag set.
+
+## Engineering decisions
+
+**Hub-spoke rather than Virtual WAN.** It gives explicit control over firewall, DNS and routing, costs less for a handful of regions, and is easier to reason about. Virtual WAN is on the roadmap for large multi-region estates.
+
+**Vending as code.** A landing zone is a reviewed pull request. The guardrails (no Owner for app teams, a default route to the firewall, a spend alert) are code paths, not checklist items a human might skip.
+
+**Two providers for peering.** `lz-vending` declares an `azurerm.hub` provider alias, so the spoke stack can create both sides of the peering without ever being given Contributor on the hub.
+
+**Overlay networking for AKS.** Pods do not consume VNet addresses, so spokes stay /22-sized and IP planning stays sane across many landing zones.
+
+**Built-in policies first.** Built-in definitions need no maintenance. Custom ones are only worth it when nothing built in fits.
+
+**Fail at plan, not apply.** There are 72 `validation` blocks across the module variables, covering CIDRs, SKUs, reserved subnet names and privileged roles. App-team role assignments reject Owner, User Access Administrator and RBAC Administrator outright. A half-applied landing zone is far more expensive to clean up than a failed plan.
+
+**No secrets anywhere.** CI authenticates with OIDC federated credentials, and remote state uses Entra ID auth with shared keys disabled.
+
+## Results & evidence
+
+- **8 modules and 2 example stacks**, roughly 3,000 lines of HCL, each module with its own README.
+- **CI on every push and pull request:** `terraform fmt -check -recursive`, `init -backend=false` plus `validate` for each example, TFLint with the azurerm ruleset, and a Checkov policy-as-code scan with results in the job summary.
+- A commented `plan` job shows the exact `azure/login` OIDC wiring for connecting the repo to a real tenant.
+- The security baseline is visible in code: private API server, no NIC public IPs by policy, Bastion-only admin access, firewall threat intelligence set to Deny, and central diagnostics for the firewall, hub and AKS control plane.
+
+The patterns come from enterprise platforms I have built; this repository distils them with placeholder values, and its CI validates the code without connecting to a tenant.
+
+## Limitations & next steps
+
+- **No module tests.** Validation is static (fmt, validate, lint, Checkov). Terratest or `terraform test` suites are the most important gap.
+- **Checkov is soft-fail**, so findings are reported rather than blocking.
+- **Single connectivity model.** No Virtual WAN option yet.
+- **Security tooling stops at the platform layer.** Defender for Cloud plans, a Sentinel workspace option and an AKS policy initiative (pod security baseline, allowed registries) are on the roadmap.
+- **Next:** an option to swap modules for Azure Verified Modules where they fit.

@@ -1,0 +1,19 @@
+flowchart LR
+    subgraph PLAT["examples/platform"]
+        GOV["governance<br/>management groups +<br/>built-in policies"]
+        MGMT["management<br/>Log Analytics"]
+        CONN["connectivity<br/>hub VNet, Firewall,<br/>Bastion, private DNS"]
+        IDN["identity<br/>OIDC federated credential"]
+    end
+    PR["App team PR<br/>tfvars"] --> CI["GitHub Actions OIDC<br/>fmt, validate, tflint, checkov"]
+    IDN -.-> CI
+    CI --> VEND
+    subgraph LZ["examples/landing-zone-aks"]
+        VEND["lz-vending<br/>subscription, spoke VNet,<br/>NSGs, UDR, RBAC"]
+        AKS["aks-spoke<br/>private AKS, Overlay + Cilium,<br/>workload identity"]
+    end
+    VEND --> AKS
+    VEND -->|"peering via azurerm.hub"| CONN
+    AKS -->|"UDR 0.0.0.0/0 egress"| CONN
+    AKS -.->|"diagnostics"| MGMT
+    GOV -.->|"policy scope"| VEND

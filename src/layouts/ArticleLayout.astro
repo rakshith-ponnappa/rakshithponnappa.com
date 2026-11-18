@@ -1,0 +1,668 @@
+---
+import BaseLayout from './BaseLayout.astro';
+import Icon from '../components/Icon.astro';
+import Diagram from '../components/Diagram.astro';
+import ContactCTA from '../components/ContactCTA.astro';
+import type { MarkdownHeading } from 'astro';
+
+interface Meta {
+  k: string;
+  v: string;
+}
+interface Link {
+  href: string;
+  title: string;
+}
+interface Props {
+  kind: 'work' | 'projects';
+  slug: string;
+  title: string;
+  eyebrow: string;
+  summary: string;
+  meta: Meta[];
+  metrics: { value: string; label: string }[];
+  stack: string[];
+  highlights?: string[];
+  repo?: string;
+  diagram?: string;
+  diagramAlt?: string;
+  headings: MarkdownHeading[];
+  prev?: Link;
+  next?: Link;
+  jsonLd?: Record<string, unknown>[];
+  ogImage?: string;
+}
+const p = Astro.props;
+const section = p.kind === 'work' ? { href: '/work/', label: 'Work' } : { href: '/projects/', label: 'Projects' };
+const toc = p.headings.filter((h) => h.depth === 2);
+const isWork = p.kind === 'work';
+// Postmortem phases come straight from the case study's own ## headings.
+const phases = isWork && toc.length >= 3 ? toc.map((h) => ({ slug: h.slug, label: /\bnext\b/i.test(h.text) ? 'Next' : h.text })) : [];
+// A metric only gets a diff sign when its label states the direction; anything else stays neutral.
+const signOf = (label: string): '+' | '−' | '' =>
+  /\b(reduc(tion|ed)|decrease[sd]?|fewer|cut|removed|cleaned up|decommissioned|retired)\b/i.test(label)
+    ? '−'
+    : /\b(savings?|saved|increase[sd]?|gain(ed)?|added)\b/i.test(label)
+      ? '+'
+      : '';
+const breadcrumbs = {
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Home', item: Astro.site?.toString() },
+    { '@type': 'ListItem', position: 2, name: section.label, item: new URL(section.href, Astro.site).toString() },
+    { '@type': 'ListItem', position: 3, name: p.title },
+  ],
+};
+---
+
+<BaseLayout title={p.title} description={p.summary} type="article" jsonLd={[breadcrumbs, ...(p.jsonLd ?? [])]} image={p.ogImage}>
+  <article data-kind={p.kind}>
+    <header class="head container-x">
+      <nav class="crumbs mono" aria-label="Breadcrumb">
+        <a href={section.href}><Icon name="arrow-left" size={14} /> {section.label}</a>
+        <span>/</span>
+        <span aria-current="page">{p.slug}</span>
+      </nav>
+      <p class="eyebrow enter">{p.eyebrow}</p>
+      <h1 class="enter" data-i="1" data-vt={`${p.kind === 'work' ? 'work' : 'proj'}-${p.slug}`}>{p.title}</h1>
+      <p class="lede enter" data-i="2">{p.summary}</p>
+
+      <dl class="meta enter" data-i="3">
+        {
+          p.meta.map((m) => (
+            <div>
+              <dt class="mono">{m.k}</dt>
+              <dd>{m.v}</dd>
+            </div>
+          ))
+        }
+      </dl>
+
+      {
+        p.metrics.length > 0 && (
+          <dl class:list={['metrics enter', { diff: isWork }]} data-i="4">
+            {p.metrics.map((m) => {
+              const sign = signOf(m.label);
+              return (
+                <div data-sign={isWork ? (sign === '+' ? 'plus' : sign ? 'minus' : 'none') : undefined}>
+                  <dt class="tabular">{m.value}</dt>
+                  <dd>{m.label}</dd>
+                </div>
+              );
+            })}
+          </dl>
+        )
+      }
+
+      {
+        phases.length > 0 && (
+          <nav class="phases enter" data-i="5" aria-label="Postmortem phases">
+            <p class="ph-k mono">
+              <span>postmortem</span> {phases.length} phases
+            </p>
+            <ol>
+              {phases.map((ph, i) => (
+                <li>
+                  <a href={`#${ph.slug}`} data-phase={ph.slug}>
+                    <span class="ph-i mono tabular">{String(i + 1).padStart(2, '0')}</span>
+                    <span class="ph-t">{ph.label}</span>
+                  </a>
+                </li>
+              ))}
+            </ol>
+          </nav>
+        )
+      }
+    </header>
+
+    {
+      p.diagram && (
+        <div class="container-x fig reveal">
+          <Diagram src={p.diagram} alt={p.diagramAlt ?? p.title} />
+        </div>
+      )
+    }
+
+    <div class="container-x body">
+      <div class="rail">
+        <div class="sticky">
+          {
+            toc.length > 0 && (
+              <nav class="toc" aria-label="On this page">
+                <p class="eyebrow">On this page</p>
+                <ol>
+                  {toc.map((h) => (
+                    <li>
+                      <a href={`#${h.slug}`} data-toc={h.slug}>
+                        {h.text}
+                      </a>
+                    </li>
+                  ))}
+                </ol>
+              </nav>
+            )
+          }
+          <aside class="side">
+            {
+              p.highlights && p.highlights.length > 0 && (
+                <div class="blk">
+                  <p class="eyebrow">Highlights</p>
+                  <ul class="hl">
+                    {p.highlights.map((h) => (
+                      <li>{h}</li>
+                    ))}
+                  </ul>
+                </div>
+              )
+            }
+            <div class="blk">
+              <p class="eyebrow">Stack</p>
+              <ul class="stack">
+                {p.stack.map((s) => <li class="chip">{s}</li>)}
+              </ul>
+            </div>
+            {
+              p.repo && (
+                <a class="btn repo" href={p.repo} rel="noopener">
+                  <Icon name="github" /> View on GitHub <Icon name="arrow-up-right" size={14} />
+                </a>
+              )
+            }
+          </aside>
+        </div>
+      </div>
+      <div class="prose" data-prose>
+        <slot />
+      </div>
+    </div>
+
+    <nav class="container-x pager" aria-label="More">
+      {
+        p.prev ? (
+          <a href={p.prev.href} class="card glow">
+            <span class="mono k">← previous</span>
+            <span>{p.prev.title}</span>
+          </a>
+        ) : (
+          <span />
+        )
+      }
+      {
+        p.next && (
+          <a href={p.next.href} class="card glow nx">
+            <span class="mono k">next →</span>
+            <span>{p.next.title}</span>
+          </a>
+        )
+      }
+    </nav>
+  </article>
+  <ContactCTA />
+</BaseLayout>
+
+<style>
+  .head {
+    padding-top: clamp(2.5rem, 6vw, 5rem);
+  }
+  .crumbs {
+    display: flex;
+    gap: 0.6rem;
+    align-items: center;
+    font-size: 0.75rem;
+    color: var(--fg-faint);
+    margin-bottom: 2.5rem;
+  }
+  .crumbs a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: var(--fg-muted);
+  }
+  .crumbs a:hover {
+    color: var(--fg);
+  }
+  .eyebrow {
+    color: var(--signal);
+  }
+  h1 {
+    margin-top: 1rem;
+    font-size: var(--step-4);
+    letter-spacing: -0.045em;
+    max-width: 22ch;
+  }
+  .lede {
+    margin-top: 1.5rem;
+    max-width: 50rem;
+  }
+  .meta {
+    margin-top: 2.5rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 0;
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .meta div {
+    padding: 1rem 1.15rem;
+    /* Hairlines on the cells (outer edges are clipped by the wrapper), so a short last row leaves clean background. */
+    box-shadow:
+      1px 0 0 var(--line-soft),
+      0 1px 0 var(--line-soft);
+  }
+  .meta dt {
+    font-size: 0.68rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--fg-faint);
+  }
+  .meta dd {
+    margin-top: 0.35rem;
+    font-size: 0.95rem;
+  }
+  .metrics {
+    margin-top: 1.25rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr));
+    gap: 0.75rem;
+  }
+  .metrics div {
+    padding: 1.25rem 1.2rem;
+    border-radius: var(--radius);
+    border: 1px solid color-mix(in oklch, var(--signal) 25%, var(--line-soft));
+    background: linear-gradient(170deg, var(--signal-soft), transparent 70%);
+  }
+  .metrics dt {
+    font-size: var(--step-3);
+    font-weight: 600;
+    letter-spacing: -0.04em;
+    line-height: 1;
+  }
+  .metrics dd {
+    margin-top: 0.5rem;
+    font-size: 0.85rem;
+    color: var(--fg-muted);
+    line-height: 1.35;
+  }
+  /* Case-study metrics read as diff chips: a mono gutter carries the sign only when the label states it. */
+  .diff div {
+    display: grid;
+    grid-template-columns: 2rem minmax(0, 1fr);
+    grid-template-rows: auto 1fr;
+    padding: 0;
+    overflow: hidden;
+    border-color: var(--line-soft);
+    background: var(--bg-raised);
+  }
+  .diff div::before {
+    content: '';
+    grid-row: 1 / -1;
+    display: grid;
+    justify-content: center;
+    padding-top: 1.45rem;
+    font-family: var(--font-mono);
+    font-size: 1.35rem;
+    line-height: 1;
+    color: var(--fg-faint);
+    background: color-mix(in oklch, var(--fg) 2.5%, transparent);
+    border-right: 1px dashed var(--line-soft);
+  }
+  .diff dt,
+  .diff dd {
+    grid-column: 2;
+    padding-inline: 1.1rem;
+  }
+  .diff dt {
+    padding-top: 1.15rem;
+    font-size: min(var(--step-3), 2.5rem);
+  }
+  .diff dd {
+    padding-bottom: 1.1rem;
+  }
+  /* Neutral metrics have no sign, so they drop the gutter entirely. */
+  .diff [data-sign='none'] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .diff [data-sign='none']::before {
+    display: none;
+  }
+  .diff [data-sign='none'] dt,
+  .diff [data-sign='none'] dd {
+    grid-column: 1;
+  }
+  .diff [data-sign='plus'],
+  .diff [data-sign='minus'] {
+    border-color: color-mix(in oklch, var(--signal) 35%, var(--line-soft));
+    background: linear-gradient(90deg, var(--signal-soft), transparent 75%), var(--bg-raised);
+  }
+  .diff [data-sign='plus']::before,
+  .diff [data-sign='minus']::before {
+    color: var(--signal);
+    font-weight: 600;
+    background: var(--signal-soft);
+    border-right-color: color-mix(in oklch, var(--signal) 45%, transparent);
+  }
+  .diff [data-sign='plus']::before {
+    content: '+';
+    content: '+' / '';
+  }
+  .diff [data-sign='minus']::before {
+    content: '−';
+    content: '−' / '';
+  }
+  .phases {
+    margin-top: 2rem;
+  }
+  .ph-k {
+    font-size: 0.7rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--fg-faint);
+  }
+  .ph-k span {
+    color: var(--signal);
+    margin-right: 0.4rem;
+  }
+  .phases ol {
+    margin-top: 0.75rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr));
+    gap: 0.35rem;
+  }
+  .phases a {
+    position: relative;
+    display: grid;
+    gap: 0.2rem;
+    padding: 0.85rem 0.5rem 0.4rem 0;
+    border-top: 2px solid var(--line);
+    color: var(--fg-muted);
+    transition:
+      color var(--t-2),
+      border-color var(--t-2);
+  }
+  .phases a::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: -6px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--bg);
+    border: 2px solid var(--line);
+    transition:
+      background var(--t-2),
+      border-color var(--t-2);
+  }
+  .ph-i {
+    font-size: 0.7rem;
+    color: var(--fg-faint);
+  }
+  .ph-t {
+    font-size: 0.9rem;
+    font-weight: 520;
+    letter-spacing: -0.01em;
+    line-height: 1.25;
+  }
+  .phases a:hover {
+    color: var(--fg);
+  }
+  .phases a:hover::before {
+    border-color: var(--fg-muted);
+  }
+  .phases a[data-past] {
+    border-top-color: color-mix(in oklch, var(--signal) 55%, var(--line));
+  }
+  .phases a[data-past]::before {
+    background: color-mix(in oklch, var(--signal) 55%, var(--line));
+    border-color: transparent;
+  }
+  .phases a[aria-current] {
+    color: var(--fg);
+    border-top-color: var(--signal);
+  }
+  .phases a[aria-current]::before {
+    background: var(--signal);
+    border-color: var(--signal);
+    box-shadow: 0 0 0 4px var(--signal-soft);
+  }
+  .phases a[aria-current] .ph-i {
+    color: var(--signal);
+  }
+  .fig {
+    margin-top: clamp(2.5rem, 5vw, 4rem);
+  }
+  .body {
+    margin-top: clamp(2.5rem, 5vw, 4rem);
+    display: grid;
+    grid-template-columns: 15.5rem minmax(0, 1fr);
+    gap: clamp(2rem, 5vw, 5rem);
+  }
+  .sticky {
+    position: sticky;
+    top: calc(var(--header-h) + 1.5rem);
+    display: grid;
+    gap: 2rem;
+  }
+  .side {
+    display: grid;
+    gap: 2rem;
+  }
+  .toc ol {
+    position: relative;
+    margin-top: 0.8rem;
+    display: grid;
+    gap: 0.1rem;
+    border-left: 1px solid var(--line-soft);
+  }
+  .toc a {
+    display: block;
+    padding: 0.3rem 0 0.3rem 0.9rem;
+    margin-left: -1px;
+    border-left: 1px solid transparent;
+    font-size: 0.88rem;
+    color: var(--fg-faint);
+    transition:
+      color var(--t-2),
+      border-color var(--t-2);
+  }
+  .toc a:hover {
+    color: var(--fg);
+  }
+  .toc a[aria-current='true'] {
+    color: var(--fg);
+    border-left-color: var(--signal);
+  }
+  /* Reading progress on the case-study TOC rail; without scroll timelines or with reduced motion the rail stays static. */
+  @supports (animation-timeline: scroll()) {
+    @media (prefers-reduced-motion: no-preference) and (min-width: 961px) {
+      [data-kind='work'] .toc ol::before {
+        content: '';
+        position: absolute;
+        left: -1px;
+        top: 0;
+        width: 1px;
+        height: 100%;
+        background: var(--signal);
+        transform-origin: top;
+        animation: read-progress linear both;
+        pointer-events: none;
+      }
+      /* Separate rule: the CSS minifier would otherwise fold the timeline into the animation shorthand, which Chrome rejects. */
+      article[data-kind='work'] .toc ol::before {
+        animation-timeline: scroll(root block);
+      }
+      @keyframes read-progress {
+        from {
+          transform: scaleY(0);
+        }
+        to {
+          transform: scaleY(1);
+        }
+      }
+    }
+  }
+  .blk .eyebrow,
+  .toc .eyebrow {
+    color: var(--fg-faint);
+  }
+  .hl {
+    margin-top: 0.8rem;
+    display: grid;
+    gap: 0.6rem;
+    font-size: 0.88rem;
+    color: var(--fg-muted);
+    line-height: 1.45;
+  }
+  .hl li {
+    padding-left: 0.9rem;
+    position: relative;
+  }
+  .hl li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.6em;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--signal);
+  }
+  .stack {
+    margin-top: 0.8rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+  }
+  .repo {
+    justify-content: center;
+  }
+  .pager {
+    margin-top: clamp(4rem, 8vw, 6rem);
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+  .pager a {
+    display: grid;
+    gap: 0.4rem;
+    padding: 1.3rem 1.4rem;
+    font-weight: 560;
+    letter-spacing: -0.01em;
+  }
+  .pager .k {
+    font-size: 0.72rem;
+    font-weight: 400;
+    color: var(--fg-faint);
+  }
+  .pager .nx {
+    text-align: right;
+    grid-column: 2;
+  }
+  @media (max-width: 960px) {
+    .body {
+      display: flex;
+      flex-direction: column;
+    }
+    /* Flatten the rail so the TOC leads the prose and the stack/highlights follow it. */
+    .rail,
+    .sticky {
+      display: contents;
+    }
+    .toc {
+      order: -1;
+      padding: 1rem 1.1rem;
+      border: 1px solid var(--line-soft);
+      border-radius: var(--radius);
+      background: var(--bg-raised);
+    }
+    .prose {
+      order: 1;
+    }
+    .side {
+      order: 2;
+    }
+  }
+  @media (max-width: 600px) {
+    .metrics.diff {
+      gap: 0.5rem;
+    }
+    .diff div {
+      grid-template-columns: 2rem auto minmax(0, 1fr);
+      grid-template-rows: auto;
+      align-items: center;
+    }
+    .diff div::before {
+      grid-row: 1;
+      align-self: stretch;
+      align-content: center;
+      padding-top: 0;
+    }
+    .diff dt {
+      grid-column: 2;
+      padding: 0.85rem 0 0.85rem 0.9rem;
+      font-size: var(--step-2);
+      white-space: nowrap;
+    }
+    .diff dd {
+      grid-column: 3;
+      margin-top: 0;
+      padding: 0.85rem 0.9rem;
+      font-size: 0.8rem;
+    }
+    .phases ol {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      row-gap: 0.9rem;
+    }
+  }
+  @media (max-width: 600px) {
+    .pager {
+      grid-template-columns: 1fr;
+    }
+    .pager .nx {
+      grid-column: 1;
+    }
+  }
+</style>
+
+<script>
+  // Scroll-spy for the TOC and the postmortem phase timeline.
+  const heads = [...document.querySelectorAll<HTMLElement>('[data-prose] h2[id]')];
+  const tocLinks = [...document.querySelectorAll<HTMLAnchorElement>('[data-toc]')];
+  const phaseLinks = [...document.querySelectorAll<HTMLAnchorElement>('[data-phase]')];
+  if (heads.length && (tocLinks.length || phaseLinks.length)) {
+    let current: string | null | undefined;
+    const update = () => {
+      const line = innerHeight * 0.3;
+      let id: string | null = null;
+      // The active section is the last heading above the reading line; above the first heading nothing is active.
+      for (const h of heads) {
+        if (h.getBoundingClientRect().top <= line) id = h.id;
+        else break;
+      }
+      if (id === current) return;
+      current = id;
+      tocLinks.forEach((a) => (a.dataset.toc === id ? a.setAttribute('aria-current', 'true') : a.removeAttribute('aria-current')));
+      const at = phaseLinks.findIndex((a) => a.dataset.phase === id);
+      phaseLinks.forEach((a, i) => {
+        a.toggleAttribute('data-past', at >= 0 && i < at);
+        if (i === at) a.setAttribute('aria-current', 'step');
+        else a.removeAttribute('aria-current');
+      });
+    };
+    let raf = 0;
+    addEventListener(
+      'scroll',
+      () => {
+        if (!raf)
+          raf = requestAnimationFrame(() => {
+            raf = 0;
+            update();
+          });
+      },
+      { passive: true },
+    );
+    addEventListener('resize', update, { passive: true });
+    update();
+  }
+</script>

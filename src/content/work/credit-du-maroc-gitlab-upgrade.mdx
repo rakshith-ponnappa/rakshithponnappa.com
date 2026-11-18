@@ -1,0 +1,72 @@
+---
+title: "Multi-hop self-managed GitLab upgrade for a bank's CI/CD estate"
+client: "Crédit du Maroc"
+industry: "Banking"
+employer: "GitLab"
+period: "Oct 2026 – present"
+role: "Professional Services Engineer, GitLab (hop execution)"
+summary: "As a GitLab Professional Services Engineer I am upgrading a bank's self-managed GitLab from 12.x towards a supported 19.x release, one required stop at a time: each hop runs on a copy of the live data and is promoted only on evidence. The work is in progress."
+clouds: []
+stack: ["GitLab Omnibus", "Docker Compose", "PostgreSQL", "nginx", "rsync", "Bash", "Python", "GitLab Runner"]
+metrics:
+  - { value: "12.x → 19.x", label: "upgrade path, in progress" }
+diagram: "/diagrams/credit-du-maroc-gitlab-upgrade.svg"
+diagramAlt: "Per-hop flow: wait for the previous hop's background migrations to reach zero, take a baseline, block runner job requests at the proxy, stop GitLab and copy the data, start the next pinned version on the copy, validate it, then either promote the copy to live or discard it with live data untouched, and finally unblock CI, run a test pipeline and report before the next hop."
+repo: "https://github.com/rakshith-ponnappa/gitlab-omnibus-upgrade-playbook"
+order: 7
+featured: true
+---
+
+## Context
+
+Crédit du Maroc runs its CI/CD on self-managed GitLab: source code and pipelines for the bank's engineering teams. The goal of this phase is a supported 19.x release with no data loss. Later phases cover moving the platform to new infrastructure.
+
+GitLab cannot jump from 12 to 19. Each major version has required upgrade stops, database migrations that must finish before the next stop, and bundled PostgreSQL upgrades along the way. GitLab's Upgrade Path tool turned that into a long chain of hops for this instance. I deliver it on GitLab's Professional Services team with one other engineer: we run hops alternately from one shared runbook.
+
+**Status: in progress.** The instance is several major versions past GitLab 12, but the path to 19.x isn't finished. I won't call it finished until the last hop is validated.
+
+## Constraints
+
+- **Regulated change control.** Every hop needs an approved change, a maintenance window, evidence and a rollback plan agreed before the window opens.
+- **Controlled access.** All work goes through the bank's privileged-access controls, so every command is prepared and reviewed before the window opens.
+- **Downtime per hop.** Every hop needs a maintenance window, and disk space has to cover a full working copy of the data.
+- **Live CI.** Runners keep asking for jobs. A pipeline that starts mid-upgrade fails or writes to a database that is being migrated.
+- **Version-specific traps.** PostgreSQL major upgrades, an OS C-library change that invalidates text indexes, OpenSSL 3, token expiry enforcement and stricter CI job-token defaults each land at a different stop.
+
+## What I did
+
+1. **Planned the path as hops and windows.** I generated the required stops with GitLab's Upgrade Path tool and read the upgrade notes for every major version crossed. Each hop has its own work item listing its gate and risks: PostgreSQL checks at each new major, an OpenSSL 3 TLS test, and an audit of CI job-token allowlists before GitLab 18. Hops with heavy migrations get longer windows.
+2. **Copy, upgrade, then promote.** GitLab runs from the Omnibus container image, so I designed each hop to upgrade a copy rather than the live data. We warm-sync the data while GitLab is still up, stop it, cold-sync and back up PostgreSQL, then start the next pinned version on the copy. Live data is only replaced once the copy passes validation, and the old data is kept as an archive until the next hop starts.
+3. **Blocked CI at the proxy.** Before downtime, nginx returns 503 to the runner job-request endpoint, so no new job can start. Running jobs get a fixed time to finish before they are cancelled and recorded. The closing checklist removes the block and proves CI works again with a test pipeline.
+4. **Made background migrations the gate.** A hop does not start until the previous hop's migrations, both legacy and batched, are at zero with nothing failed. On one hop a batched migration was estimated to run far longer than any reasonable window. We promoted with it still running and made its completion the gate for the next hop, instead of stretching the window.
+5. **Diffed the data, not just the health checks.** Scripts capture the same baseline before and after every hop: versions, service state, migration status, and counts of projects, users, repositories and pipelines. The window only closes when nothing is missing. On one hop the comparison flagged changed branch-protection settings, and we investigated before closing rather than waving it through.
+6. **Handled the database milestones separately.** Bundled PostgreSQL upgrades are planned stops. At the hop where the base image changed the C library, an index integrity check found damaged indexes before any reindex ran, so the fix was targeted and verified.
+7. **Kept runners out of the critical path.** I inventoried the runners rather than asking the bank to upgrade them at every hop. Upgrades are grouped into checkpoints at the last release of each major, and the inventory also helped the client tidy up unused runners.
+8. **Published the sanitised method.** I wrote the generic version as a public playbook: hop runbook, pre-checks, PostgreSQL, runners, rollback, evidence and operator safety, plus a read-only evidence collector.
+
+## Key decisions
+
+| Decision | Why | Trade-off |
+|---|---|---|
+| Upgrade a copy, then promote | Live data is untouched until validation passes. Rolling back is a matter of not promoting, which is faster and safer than a restore. | Needs disk for a full copy and adds sync time to every window. |
+| Block runner job requests at nginx | Stops new CI work cleanly without touching the configuration of every runner in the fleet. | One more change to revert. It sits on the closing checklist so it can't be forgotten. |
+| Background migrations as the hop gate | Starting a hop with migrations still running is the most common way to break a multi-hop upgrade. | Some windows wait on GitLab, not on us, and the timeline has to absorb that. |
+| Before-and-after data diff on every hop | Health checks show the service is up. A diff shows the data is still all there, and it answers audit questions directly. | Every unexpected difference has to be explained before the window closes. |
+| Runner checkpoints per major version | Runners tolerate small version gaps. Grouping upgrades saves the client an action every hop. | The gap grows within a major version, so each checkpoint matters. |
+| Snapshot as last resort, not first | The copy and the kept archive cover most failures. A VM snapshot covers the rest. | More artefacts to manage, with explicit rules on what is deleted and when. |
+
+## Outcome
+
+- The instance is **off GitLab 12 and several major versions along the path** with no data loss, every hop inside an approved window and backed by before-and-after evidence.
+- Downtime has varied a lot from hop to hop. The longest windows came from migrations and investigation, not the package install.
+- A **repeatable hop runbook** that two engineers run the same way, refined after each hop. Fixes include always restoring the proxy configuration non-interactively, and checking only the configuration files nginx actually loads.
+- The **public playbook** captures the method without client detail.
+
+The upgrade is **still in progress**. Each of the riskier gates on the path (token expiry in 16, OpenSSL 3 in 17, job-token allowlists in 18) has its own checks in the plan.
+
+## What I'd do next
+
+- **Finish the path and re-check it.** Re-run the Upgrade Path tool before the final hops, since an extra required stop means renumbering the plan.
+- **Automate the gate.** Turn the migration check, data diff and closing checklist into one script with a clear pass or fail, so the operator reads one verdict instead of several outputs.
+- **Rehearse a post-promote rollback.** Not promoting is cheap. Rolling back from the kept archive after a promotion is the path I would most like proven on a clone.
+- **Stay current afterwards.** Agree a cadence with the client to take each required stop as it ships, so the next upgrade is one hop, not another long chain of them.

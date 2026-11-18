@@ -1,0 +1,409 @@
+---
+import { getCollection } from 'astro:content';
+import Icon from './Icon.astro';
+import { profile, certifications, experience } from '../data/profile';
+
+const work = (await getCollection('work')).sort((a, b) => a.data.order - b.data.order);
+const projects = (await getCollection('projects')).sort((a, b) => a.data.order - b.data.order);
+
+type Item = { group: string; label: string; hint?: string; href?: string; action?: string; k?: string };
+const items: Item[] = [
+  { group: 'Pages', label: 'Home', href: '/', k: 'index start status' },
+  { group: 'Pages', label: 'Work: client case studies', href: '/work/', k: 'engagements clients postmortems' },
+  { group: 'Pages', label: 'Projects: open source', href: '/projects/', k: 'repos github code' },
+  { group: 'Pages', label: 'Experience: career trace', href: '/experience/', k: 'timeline jobs history roles' },
+  { group: 'Pages', label: 'Credentials', href: '/credentials/', k: 'certifications certs education aws azure cka' },
+  { group: 'Pages', label: 'Résumé', href: '/resume/', k: 'cv resume' },
+  { group: 'Pages', label: 'Ask the runbook', href: '/ask/', k: 'ai chat rag question' },
+  { group: 'Pages', label: 'Evals: how the assistant is tested', href: '/evals/', k: 'evaluation retrieval metrics' },
+  { group: 'Pages', label: 'Open a ticket (contact)', href: '/contact/', k: 'email hire message' },
+  ...work.map((w) => ({
+    group: 'Work',
+    label: w.data.title,
+    hint: w.data.client,
+    href: `/work/${w.id}/`,
+    k: [w.data.client, w.data.industry, ...w.data.stack, ...w.data.clouds].join(' '),
+  })),
+  ...projects.map((p) => ({
+    group: 'Projects',
+    label: p.data.title,
+    hint: p.data.category,
+    href: `/projects/${p.id}/`,
+    k: [p.data.tagline, ...p.data.stack].join(' '),
+  })),
+  ...certifications.map((c) => ({
+    group: 'Credentials',
+    label: c.name,
+    hint: c.code ? `${c.issuer} · ${c.code}` : c.issuer,
+    href: '/credentials/',
+    k: [c.code, c.issuer, c.group, 'certification'].filter(Boolean).join(' '),
+  })),
+  ...experience.map((r) => ({
+    group: 'Experience',
+    label: `${r.company}: ${r.title.replace(/\s*\(.*\)$/, '')}`,
+    hint: r.end ? `${r.start.slice(0, 4)}–${r.end.slice(0, 4)}` : `${r.start.slice(0, 4)}–now`,
+    href: '/experience/',
+    // Proper nouns and tool names from the bullets (deduped) keep the index small but findable ("kube" → Kubernetes).
+    k: [
+      r.kind,
+      r.summary,
+      ...r.clients.map((c) => `${c.label} ${c.detail ?? ''}`),
+      ...new Set(r.bullets.join(' ').match(/\b[A-Z][\w.+/-]*/g) ?? []),
+    ].join(' '),
+  })),
+  { group: 'Actions', label: 'Download résumé (PDF)', href: profile.resumePdf, action: 'download', k: 'cv pdf' },
+  { group: 'Actions', label: 'Copy email address', action: 'copy-email', hint: profile.email, k: 'mail contact' },
+  { group: 'Actions', label: 'Call', href: profile.phoneHref, hint: profile.phone, k: 'phone tel' },
+  { group: 'Actions', label: 'Toggle theme', action: 'theme', k: 'dark light mode noc day' },
+  { group: 'Actions', label: 'Open GitHub', href: profile.github, hint: 'rakshith-ponnappa', k: 'code repos' },
+  { group: 'Actions', label: 'Open LinkedIn', href: profile.linkedin, k: 'profile' },
+];
+const data = JSON.stringify({ items, email: profile.email, careerStart: profile.careerStart });
+---
+
+<dialog class="cmdk" data-cmdk aria-label="Command palette">
+  <div class="cmdk-input">
+    <Icon name="search" size={17} />
+    <input
+      type="text"
+      data-cmdk-input
+      placeholder="Jump to a page, project or action, or ask a question…"
+      autocomplete="off"
+      spellcheck="false"
+      role="combobox"
+      aria-expanded="true"
+      aria-controls="cmdk-list"
+      aria-autocomplete="list"
+    />
+    <kbd>esc</kbd>
+  </div>
+  <div class="cmdk-out mono" data-cmdk-out hidden aria-live="polite"></div>
+  <ul class="cmdk-list" id="cmdk-list" role="listbox" data-cmdk-list></ul>
+  <div class="cmdk-foot mono">
+    <span><kbd>↑</kbd><kbd>↓</kbd> navigate <kbd>↵</kbd> open</span>
+    <span class="tip">try <code>whoami</code> or <code>sudo hire rakshith</code></span>
+  </div>
+  <script type="application/json" data-cmdk-data set:html={data.replace(/</g, '\\u003c')} />
+</dialog>
+
+<style>
+  .cmdk {
+    width: min(42rem, calc(100vw - 2rem));
+    max-height: min(34rem, calc(100dvh - 6rem));
+    margin: 12vh auto auto;
+    padding: 0;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    background: color-mix(in oklch, var(--bg-raised) 92%, transparent);
+    backdrop-filter: blur(20px) saturate(1.3);
+    color: var(--fg);
+    box-shadow:
+      0 0 0 1px oklch(1 0 0 / 0.03) inset,
+      0 40px 120px -20px oklch(0 0 0 / 0.65);
+    overflow: hidden;
+  }
+  .cmdk[open] {
+    display: flex;
+    flex-direction: column;
+    animation: cmdk-in var(--t-3) var(--ease-out);
+  }
+  .cmdk::backdrop {
+    background: oklch(0.1 0.01 255 / 0.55);
+    backdrop-filter: blur(3px);
+  }
+  @keyframes cmdk-in {
+    from {
+      opacity: 0;
+      transform: translateY(-8px) scale(0.985);
+    }
+  }
+  .cmdk-input {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem 1.1rem;
+    border-bottom: 1px solid var(--line-soft);
+    color: var(--fg-faint);
+  }
+  .cmdk-input input {
+    flex: 1;
+    background: transparent;
+    border: 0;
+    outline: none;
+    font-size: 1.05rem;
+    color: var(--fg);
+  }
+  .cmdk-input input::placeholder {
+    color: var(--fg-faint);
+  }
+  .cmdk-out {
+    padding: 0.9rem 1.1rem;
+    font-size: 0.85rem;
+    line-height: 1.6;
+    color: var(--signal);
+    border-bottom: 1px solid var(--line-soft);
+    white-space: pre-wrap;
+    background: var(--bg-sunken);
+  }
+  .cmdk-list {
+    overflow-y: auto;
+    padding: 0.5rem;
+    overscroll-behavior: contain;
+    flex: 1;
+  }
+  .cmdk-list :global(.g) {
+    padding: 0.6rem 0.6rem 0.35rem;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--fg-faint);
+  }
+  .cmdk-list :global([role='option']) {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.6rem 0.7rem;
+    border-radius: 9px;
+    cursor: pointer;
+    font-size: 0.95rem;
+  }
+  .cmdk-list :global([role='option'] .h) {
+    margin-left: auto;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--fg-faint);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 40%;
+  }
+  .cmdk-list :global([role='option'] .ic) {
+    width: 1.6rem;
+    height: 1.6rem;
+    display: grid;
+    place-items: center;
+    border-radius: 6px;
+    border: 1px solid var(--line-soft);
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--fg-muted);
+    flex: none;
+  }
+  .cmdk-list :global([aria-selected='true']) {
+    background: color-mix(in oklch, var(--signal) 12%, transparent);
+  }
+  .cmdk-list :global([aria-selected='true'] .ic) {
+    border-color: color-mix(in oklch, var(--signal) 50%, transparent);
+    color: var(--signal);
+  }
+  .cmdk-list :global(.empty) {
+    padding: 1.5rem 0.7rem;
+    color: var(--fg-faint);
+    font-size: 0.9rem;
+  }
+  .cmdk-foot {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.65rem 1.1rem;
+    border-top: 1px solid var(--line-soft);
+    font-size: 0.72rem;
+    color: var(--fg-faint);
+  }
+  .cmdk-foot kbd {
+    margin-right: 0.2rem;
+  }
+  .cmdk-foot code {
+    color: var(--fg-muted);
+  }
+  @media (max-width: 560px) {
+    .tip {
+      display: none;
+    }
+  }
+</style>
+
+<script>
+  import { toast, toggleTheme, uptimeString } from '../scripts/ui';
+
+  type Item = { group: string; label: string; hint?: string; href?: string; action?: string; k?: string };
+  const dlg = document.querySelector<HTMLDialogElement>('[data-cmdk]')!;
+  const input = dlg.querySelector<HTMLInputElement>('[data-cmdk-input]')!;
+  const list = dlg.querySelector<HTMLUListElement>('[data-cmdk-list]')!;
+  const out = dlg.querySelector<HTMLDivElement>('[data-cmdk-out]')!;
+  const { items, email, careerStart } = JSON.parse(dlg.querySelector('[data-cmdk-data]')!.textContent!) as {
+    items: Item[];
+    email: string;
+    careerStart: string;
+  };
+
+  let shown: Item[] = [];
+  let active = 0;
+  const icons: Record<string, string> = { Pages: '/', Work: 'W', Projects: '{}', Credentials: '✓', Experience: '↦', Actions: '>', Ask: '?' };
+
+  function score(item: Item, q: string) {
+    const hay = `${item.label} ${item.hint ?? ''} ${item.k ?? ''}`.toLowerCase();
+    let s = 0;
+    for (const t of q.split(/\s+/).filter(Boolean)) {
+      const i = hay.indexOf(t);
+      if (i < 0) return -1;
+      s += i === 0 ? 3 : item.label.toLowerCase().includes(t) ? 2 : 1;
+    }
+    return s;
+  }
+
+  function render() {
+    const q = input.value.trim().toLowerCase();
+    shown = q
+      ? items
+          .map((it) => [it, score(it, q)] as const)
+          .filter(([, s]) => s >= 0)
+          .sort((a, b) => b[1] - a[1])
+          .map(([it]) => it)
+          .slice(0, 12)
+      : items
+          .filter((i) => !['Work', 'Projects', 'Credentials', 'Experience'].includes(i.group))
+          .concat(items.filter((i) => i.group === 'Work').slice(0, 4));
+    if (q.length > 2) shown.push({ group: 'Ask', label: `Ask the runbook: “${input.value.trim()}”`, href: `/ask/?q=${encodeURIComponent(input.value.trim())}` });
+    active = Math.min(active, Math.max(shown.length - 1, 0));
+    list.replaceChildren();
+    if (!shown.length) {
+      const li = document.createElement('li');
+      li.className = 'empty';
+      li.textContent = 'No matches.';
+      list.append(li);
+      return;
+    }
+    let group = '';
+    shown.forEach((it, i) => {
+      if (it.group !== group) {
+        group = it.group;
+        const g = document.createElement('li');
+        g.className = 'g';
+        g.setAttribute('role', 'presentation');
+        g.textContent = group;
+        list.append(g);
+      }
+      const li = document.createElement('li');
+      li.id = `cmdk-${i}`;
+      li.setAttribute('role', 'option');
+      li.setAttribute('aria-selected', String(i === active));
+      const ic = document.createElement('span');
+      ic.className = 'ic';
+      ic.textContent = icons[it.group] ?? '·';
+      const label = document.createElement('span');
+      label.textContent = it.label;
+      li.append(ic, label);
+      if (it.hint) {
+        const h = document.createElement('span');
+        h.className = 'h';
+        h.textContent = it.hint;
+        li.append(h);
+      }
+      li.addEventListener('click', () => run(it));
+      li.addEventListener('pointermove', () => select(i));
+      list.append(li);
+    });
+    input.setAttribute('aria-activedescendant', `cmdk-${active}`);
+  }
+
+  function select(i: number) {
+    if (i === active) return;
+    list.querySelector(`#cmdk-${active}`)?.setAttribute('aria-selected', 'false');
+    active = i;
+    const el = list.querySelector(`#cmdk-${active}`);
+    el?.setAttribute('aria-selected', 'true');
+    el?.scrollIntoView({ block: 'nearest' });
+    input.setAttribute('aria-activedescendant', `cmdk-${active}`);
+  }
+
+  function say(text: string) {
+    out.hidden = false;
+    out.textContent = text;
+  }
+
+  function run(it: Item) {
+    if (it.action === 'copy-email') {
+      navigator.clipboard?.writeText(email).then(() => toast(`Copied ${email}`));
+      dlg.close();
+      return;
+    }
+    if (it.action === 'theme') {
+      dlg.close();
+      toggleTheme();
+      return;
+    }
+    if (it.href) {
+      dlg.close();
+      if (/^https?:/.test(it.href)) window.open(it.href, '_blank', 'noopener');
+      else location.href = it.href;
+    }
+  }
+
+  // Shell-style easter eggs. Returns true when the input was a command.
+  function shell(raw: string) {
+    const cmd = raw.trim().toLowerCase().replace(/\s+/g, ' ');
+    if (cmd === 'whoami') return say('rakshith-sp\nPrincipal Platform Engineer · Bengaluru, India\ncloud platforms · sre · devsecops · ai agent infrastructure'), true;
+    if (cmd === 'uptime') return say(`up ${uptimeString(careerStart)}, load average: shipping, shipping, shipping`), true;
+    if (cmd === 'ls' || cmd === 'ls -la') return say('work/  projects/  experience/  credentials/  resume.pdf  ask/  evals/  contact/'), true;
+    if (cmd.startsWith('rm -rf')) return say('rm: refusing to remove production. A postmortem has been opened (it has not).'), true;
+    if (cmd === 'kubectl get pods' || cmd === 'k get po')
+      return say('NAME                 READY  STATUS   RESTARTS  AGE\nplatform-eng-0       1/1    Running  0         12y\nai-deployment-0      1/1    Running  0         1y\ndevsecops-0          1/1    Running  0         8y'), true;
+    if (cmd === 'sudo hire rakshith' || cmd === 'sudo hire rakshith sp') {
+      say('[sudo] password for recruiter: ********\n✓ permission granted\n→ routing you to /contact …');
+      setTimeout(() => (location.href = '/contact/?topic=hiring'), 1400);
+      return true;
+    }
+    if (cmd === 'exit' || cmd === 'quit') return dlg.close(), true;
+    if (cmd === 'help') return say('whoami · uptime · ls · kubectl get pods · sudo hire rakshith · exit'), true;
+    return false;
+  }
+
+  function open() {
+    if (dlg.open) return;
+    out.hidden = true;
+    input.value = '';
+    active = 0;
+    render();
+    dlg.showModal();
+    input.focus();
+  }
+
+  input.addEventListener('input', () => {
+    out.hidden = true;
+    active = 0;
+    render();
+  });
+  input.addEventListener('keydown', (e) => {
+    if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && !shown.length) e.preventDefault();
+    else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      select((active + 1) % shown.length);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      select((active - 1 + shown.length) % shown.length);
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (shell(input.value)) return;
+      const it = shown[active];
+      if (it) run(it);
+    }
+  });
+  dlg.addEventListener('click', (e) => {
+    if (e.target === dlg) dlg.close();
+  });
+
+  document.addEventListener('keydown', (e) => {
+    const t = e.target as HTMLElement;
+    const typing = t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName);
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+      e.preventDefault();
+      dlg.open ? dlg.close() : open();
+    } else if (e.key === '/' && !typing) {
+      e.preventDefault();
+      open();
+    }
+  });
+  document.querySelectorAll('[data-cmdk-open]').forEach((b) => b.addEventListener('click', open));
+</script>

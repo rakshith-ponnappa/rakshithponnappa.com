@@ -1,0 +1,61 @@
+---
+title: "EKS platform prototype for a 30,000-site hosting migration"
+client: "Intuitive Technology Partners"
+industry: "Cloud consulting (AWS)"
+employer: "Intuitive Technology Partners"
+period: "2018 – 2019"
+role: "DevOps Engineer (platform architecture)"
+summary: "I architected an Amazon EKS platform prototype designed to onboard 20 clients and migrate 30,000 websites, with capacity planning to keep costs under control and SignalFx monitoring so problems surfaced before customers saw them."
+clouds: ["AWS"]
+stack: ["Amazon EKS", "Kubernetes", "AWS", "SignalFx", "Capacity planning"]
+metrics:
+  - { value: "30,000", label: "websites in migration scope" }
+  - { value: "20", label: "clients to onboard" }
+diagram: "/diagrams/eks-30000-site-migration.svg"
+diagramAlt: "Twenty client estates and 30,000 websites feed an onboarding path and a capacity and cost model; both shape an Amazon EKS platform prototype, which drives the migration plan and streams metrics to SignalFx for custom dashboards and proactive alerting."
+order: 11
+---
+
+## Context
+
+In 2018 I joined Intuitive Technology Partners as a DevOps engineer. The problem on my desk was scale. A large hosting estate had to move: 20 clients, 30,000 websites between them. The direction was Kubernetes on AWS, and Amazon EKS had only just become generally available.
+
+My job was to architect the platform prototype that would prove the approach and become the template for the migration.
+
+## Constraints
+
+- **Volume, not complexity, was the hard part.** Any one website is easy to run. Thirty thousand of them, owned by 20 different clients, is a capacity, isolation and operations problem.
+- **Cost had to be designed in.** At that density, small per-site inefficiencies multiply into a large monthly bill. Capacity planning was part of the brief, not a follow-up.
+- **A young managed service.** EKS was new. The prototype had to show the platform was safe to bet on, not just that it worked on a good day.
+- **Operations had to see problems first.** With that many sites, nobody can wait for a customer to report an outage.
+
+## What I did
+
+1. **Architected the EKS platform prototype.** I designed the cluster platform the migration would land on, shaped around onboarding many clients onto shared infrastructure rather than building one bespoke environment per customer.
+2. **Planned capacity for the full estate.** I worked out the capacity needed to carry 30,000 websites, which drove both the platform's sizing and its cost profile.
+3. **Built cost control into the design.** Capacity planning doubled as the cost model, so right-sizing was a design decision rather than a clean-up exercise after go-live.
+4. **Defined the client onboarding path.** With 20 clients to bring across, onboarding had to be repeatable. Each client should follow the same route onto the platform.
+5. **Deployed SignalFx for real-time EKS monitoring.** I set up custom dashboards and proactive alerting so the team saw cluster and workload problems as they developed.
+
+## Key decisions
+
+| Decision | Why | Trade-off |
+|---|---|---|
+| Prototype first, then migrate | Proves the platform and the operating model on a small slice before committing 30,000 sites to it | Slower start than lifting everything at once |
+| Shared platform for many clients | One platform to patch, monitor and cost, instead of 20 | Isolation and fair resource sharing must be designed, not assumed |
+| Capacity planning as the cost model | At this density, sizing *is* the bill | More up-front modelling before anything is built |
+| Real-time monitoring from day one | At this scale, alerting has to catch problems before customers do | Dashboards and alerts to build and tune alongside the platform |
+
+## Outcome
+
+- An **Amazon EKS platform prototype** designed to onboard **20 clients** and migrate **30,000 websites**.
+- A **capacity plan** that framed the platform's size and cost before the migration started.
+- **SignalFx real-time monitoring** with custom dashboards and proactive alerting on EKS.
+
+Much of how I work now traces back to this platform: plan capacity before building, treat cost as an architecture property, and make the platform observable from the start.
+
+## What I'd do next
+
+- **Autoscale nodes on real demand.** Today I would pair the capacity plan with automated node provisioning, so the platform follows real traffic instead of a forecast.
+- **Make each tenant a code module.** One reviewed module per client (namespace, quotas, network policy, ingress) would turn onboarding into a pull request.
+- **Use OpenTelemetry.** Exporting through an OpenTelemetry collector keeps dashboards and alerts portable across monitoring vendors.

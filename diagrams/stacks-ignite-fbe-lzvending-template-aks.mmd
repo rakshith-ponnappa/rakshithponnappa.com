@@ -1,0 +1,13 @@
+flowchart LR
+    V["fb-lzvending workflow<br/>scaffolds app repo"] --> REPO["fb-app-* repo<br/>from this template"]
+    REPO --> B["BUILD<br/>fmt, validate, tflint, checkov"]
+    B --> CE["COST-ESTIMATE<br/>Infracost"]
+    CE --> E2["DEV to UAT to PRD<br/>East US 2"]
+    CE --> C1["DEV to UAT to PRD<br/>Central US, opt-in"]
+    RS["Remote state<br/>connectivity, identity,<br/>management"] -.-> E2
+    E2 --> LZ["Landing zone<br/>RGs, spoke VNet, Log Analytics,<br/>optional ACR, PostgreSQL, Key Vault"]
+    C1 --> LZ
+    LZ --> AKS["Private AKS<br/>UDR egress, workload identity,<br/>host encryption"]
+    AKS --> ING["App Routing NGINX<br/>internal LB + PLS"]
+    FD["Azure Front Door"] --> ING
+    AKS --> APP["fb-app-orchestration<br/>namespaces, DBs, endpoints"]

@@ -1,0 +1,18 @@
+flowchart TD
+    P["Client project<br/>.gitlab-ci.yml"] -->|"include"| LIB["Shared template library<br/>security and deploy jobs"]
+    subgraph MR["Merge request pipeline"]
+        S["SAST"]
+        SD["Secret detection"]
+        DA["DAST<br/>against a test deployment"]
+    end
+    LIB --> S & SD & DA
+    S & SD & DA --> G{"All gates green?"}
+    G -->|"no"| B["Merge blocked<br/>fix in the MR"]
+    G -->|"yes"| M["Merge to<br/>protected branch"]
+    M --> D["Deploy job<br/>short-lived GitLab<br/>OIDC token"]
+    subgraph CLOUD["Cloud federation, no stored keys"]
+        AWS["AWS<br/>role via web identity"]
+        AZ["Azure<br/>federated credential"]
+        GCP["GCP<br/>Workload Identity Federation"]
+    end
+    D --> AWS & AZ & GCP

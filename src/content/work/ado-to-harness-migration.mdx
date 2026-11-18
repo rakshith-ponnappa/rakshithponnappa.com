@@ -1,0 +1,85 @@
+---
+title: "Azure DevOps → Harness migration & ALZ QA"
+client: "Mott MacDonald"
+industry: "Engineering & consultancy"
+employer: "Ensono"
+period: "2022 – present"
+role: "Principal Consultant, DevOps (ALZ QA lead & migration author)"
+summary: "I led the build-out of an Azure landing zone QA environment (deployment sequencing, a Terraform connectivity fix and the GitHub Actions architecture) and wrote the feasibility catalogue for moving Azure DevOps pipelines to Harness SaaS, ending in a 5-week phased plan."
+clouds: ["Azure"]
+stack: ["Azure Landing Zone", "Terraform", "GitHub Actions", "Azure DevOps", "Harness"]
+metrics:
+  - { value: "5 weeks", label: "phased migration plan" }
+diagram: "/diagrams/ado-to-harness-migration.svg"
+diagramAlt: "Two workstreams: GitHub Actions deploys the landing zone QA environment layer by layer, with platform foundations, then the fixed Terraform connectivity module, then workload landing zones; separately, an Azure DevOps pipeline inventory feeds assessment checklists, complexity scoring and expression-syntax mapping into a 5-week phased Harness plan."
+order: 9
+featured: false
+---
+
+## Context
+
+Mott MacDonald's Azure estate sits on an Azure Landing Zone (ALZ) built from Terraform modules. I worked on two threads in this engagement.
+
+The first was the **ALZ QA environment**. A landing zone QA environment is where changes to the platform itself (policy, networking, subscription structure) can be proven before they reach the environments that host real workloads. I led its build-out: deployment sequencing, fixing the Terraform connectivity module and designing the GitHub Actions pipeline architecture.
+
+The second was a **feasibility study for moving Azure DevOps pipelines to Harness SaaS**. The question was not "can Harness run a pipeline?" but "what would it take to move these pipelines, in what order, and how long?" I authored the migration catalogue that answers it.
+
+## Constraints
+
+- **Order matters in a landing zone.** Governance, networking and the subscriptions that depend on them have to arrive in the right sequence. Deploy out of order and resources either fail on missing dependencies or, worse, land without the guardrails meant to govern them.
+- **Connectivity sits under everything.** Hub networking, peering, routing and DNS are shared by every layer above, so a fault in the connectivity module blocks the whole build.
+- **QA must resemble production.** A QA landing zone that differs structurally from production proves very little.
+- **A feasibility study must survive real pipelines.** A vendor feature list is not a plan. The catalogue had to say which pipelines move easily, which don't, and why.
+- **No big bang.** CI/CD is how every team ships. A migration has to keep delivery working while it happens.
+
+## What I did
+
+### ALZ QA environment
+
+1. **Deployment sequencing.** I worked out the order in which landing-zone components deploy into QA, so each layer finds its dependencies already in place.
+2. **Terraform connectivity module.** I debugged and fixed the connectivity module. Nothing that relies on the network can deploy until it works, so it was the critical path.
+3. **GitHub Actions pipeline architecture.** The principle I designed around is that the pipeline should encode the deployment order rather than leave it in a runbook or in someone's head. The shape I favour for landing zones follows from that: a Terraform plan on every pull request for review, apply on merge, and layers that run in dependency order, each gated on the success of the one before.
+
+### Azure DevOps → Harness SaaS feasibility
+
+4. **Assessment checklists.** A per-pipeline checklist to inventory what each pipeline really depends on. What makes an Azure DevOps pipeline hard to move is rarely the build steps. It is the surroundings: service connections, variable groups and secrets, shared YAML templates, agent pools, environments with approvals, and triggers.
+5. **Complexity scoring.** Each pipeline gets a score from its checklist, which turns "how long will this take?" into a sum and lets the work be ordered by risk.
+6. **Expression-syntax mapping.** The two platforms reference variables and parameters differently, and that is where hand migrations break quietly. I mapped Azure DevOps syntax to its Harness equivalents.
+7. **A 5-week phased execution plan.** The phasing follows the scoring: foundations first, then low-complexity pipelines to prove the pattern, then the harder waves once the approach has been tested on cheaper cases.
+
+### What the mapping has to cover
+
+A flavour of the syntax and concept gaps, as illustrative examples rather than the client's pipelines:
+
+| Azure DevOps | Harness | Note |
+|---|---|---|
+| `$(myVar)` macro variable | `<+pipeline.variables.myVar>` | Pipeline variables move into the pipeline or a template. |
+| `${{ parameters.env }}` template parameter | `<+pipeline.variables.env>` or a runtime input | Compile-time templating becomes runtime expressions or inputs. |
+| `$(Build.BuildId)` | `<+pipeline.sequenceId>` | Closest equivalent, but numbered per pipeline rather than organisation-wide. |
+| Secret from a variable group | `<+secrets.getValue("name")>` | Referenced from Harness's secret manager or a connected vault. |
+| Service connection | Connector | Authentication is re-established, not copied. |
+| Agent pool | Delegate or build infrastructure | Where the work runs changes shape. |
+
+## Key decisions
+
+| Decision | Why | Trade-off |
+|---|---|---|
+| Encode the deployment order in the pipeline | Sequencing in a pipeline is repeatable. Sequencing in a runbook depends on who runs it. | Longer end-to-end runs, and the pipeline has to change whenever the layering does. |
+| Score complexity per pipeline, not for the estate as a whole | A per-pipeline score gives an estimate that can be added up, challenged and re-ordered. | Assessment effort up front, before anything moves. |
+| Map expression syntax explicitly | A copied `$(var)` reference doesn't fail the import; it just stops meaning what it did. Silent breakage is the costliest kind. | A large, unglamorous table to maintain. |
+| Phase the migration by complexity | Early waves prove the pattern on pipelines that are cheap to fix. Later waves benefit from what was learned. | Teams run on both platforms for a while, and two systems need supporting. |
+
+## Outcome
+
+- **ALZ QA environment built out**, with its deployment sequenced, the Terraform connectivity module fixed and a GitHub Actions pipeline architecture in place.
+- **A migration catalogue for Azure DevOps → Harness SaaS**: assessment checklists, complexity scoring and expression-syntax mapping.
+- **A 5-week phased execution plan** ordered by that scoring.
+
+The migration work was a feasibility piece. Its output is the evidence and the plan, not a migrated estate.
+
+## What I'd do next
+
+- **Automate the inventory.** Most checklist answers can be pulled from the Azure DevOps REST API and the pipeline YAML. A script that pre-fills the checklist and a first-pass score would make re-assessment cheap as pipelines change.
+- **Turn the mapping into a converter.** Apply the syntax map as rules that produce draft Harness YAML, so engineers review a diff rather than rewrite by hand.
+- **Run the pilot on both platforms.** Run a pilot pipeline in parallel and compare artefacts and deployment results before switching it off in Azure DevOps.
+- **Make QA a gate, not a sandbox.** Every change to landing-zone Terraform should pass through the QA environment automatically before it reaches production.

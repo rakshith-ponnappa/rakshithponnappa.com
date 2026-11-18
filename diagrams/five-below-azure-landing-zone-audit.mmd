@@ -1,0 +1,22 @@
+flowchart TD
+  subgraph SRC["Two sources of truth"]
+    T["Terraform<br/>landing-zone code"]
+    L["Live Azure<br/>estate"]
+  end
+  subgraph REV["Read-only reviews"]
+    S["Static WAF review<br/>score 8.0"]
+    R["Runtime assessment<br/>score 6.6"]
+    C["CIS benchmark<br/>validation"]
+    K["Cost review<br/>$47K a year"]
+  end
+  T --> S
+  L --> R
+  L --> C
+  L --> K
+  S --> F["Findings with<br/>stable IDs"]
+  R --> F
+  C --> F
+  K --> F
+  F --> V["Versioned report<br/>v1 to v5"]
+  V --> M["Remediation roadmap<br/>critical findings down 75%"]
+  L --> I["AKS ingress retirement<br/>NGINX to app routing add-on"]

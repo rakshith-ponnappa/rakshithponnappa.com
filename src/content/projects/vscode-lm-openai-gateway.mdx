@@ -1,0 +1,74 @@
+---
+title: "vscode-lm-openai-gateway"
+repo: "https://github.com/rakshith-ponnappa/vscode-lm-openai-gateway"
+tagline: "A single-file VS Code extension that exposes the editor's Language Model API as a loopback-only, token-protected, OpenAI-compatible endpoint, with tool calling and reasoning effort."
+category: "ai"
+year: 2026
+status: "active"
+stack: ["JavaScript (Node.js)", "VS Code Extension API", "vscode.lm", "Node http + crypto", "vsce", "GitHub Actions"]
+highlights:
+  - "OpenAI Chat Completions in, vscode.lm out: one 300-line file with no runtime dependencies."
+  - "Function tools and tool_choice map onto the editor's model API, including multi-turn tool results."
+  - "Security first: loopback bind, 256-bit bearer token in a 0600 file, constant-time comparison, no CORS, 20 MB body cap."
+  - "Prompts and completions are never logged; only method, path, status, model and latency are."
+metrics:
+  - { value: "~300", label: "lines in a single extension.js" }
+  - { value: "0", label: "runtime dependencies" }
+  - { value: "2", label: "OpenAI endpoints implemented" }
+  - { value: "7", label: "mapped OpenAI-style error codes" }
+diagram: "/diagrams/vscode-lm-openai-gateway.svg"
+diagramAlt: "An OpenAI-compatible client sends an HTTP request with a bearer token to a loopback-only server inside the VS Code extension host. The server checks the token, enforces a body limit, translates the OpenAI messages and tools into vscode.lm calls, collects the model's full response, and returns an OpenAI chat.completion object."
+order: 5
+---
+
+## The problem
+
+A lot of agent tooling speaks one dialect: OpenAI Chat Completions. The language models I already have inside VS Code are reachable only through the editor's own `vscode.lm` API. I wanted to point local tools (curl, the OpenAI SDK, agent frameworks such as TradingAgents) at those models during personal development without writing a bespoke client for each one.
+
+The hard part is not the translation. It is doing it without opening a hole: an unauthenticated local HTTP server that forwards prompts to a signed-in model is something any web page or local process could abuse.
+
+## How it works
+
+The extension activates on `onStartupFinished`. On first run it generates a token with `crypto.randomBytes(32)`, writes it to `~/.copilot-lm-gateway/token` with mode `0600` inside a `0700` directory, and starts a Node `http` server bound to the loopback interface (port 8787 by default).
+
+Two routes are implemented:
+
+- **`GET /v1/models`** lists chat models available through `vscode.lm` from the `copilot` vendor, with id, name, family and `max_input_tokens`.
+- **`POST /v1/chat/completions`** accepts the OpenAI request shape. `model` matches an id first, then a family. Messages in `system`, `developer`, `user`, `assistant` (with `tool_calls`) and `tool` roles are converted into `vscode.lm` messages. Function `tools` and `tool_choice` (`auto`, `none`, `required` or a named function) are passed through, and tool calls come back as `message.tool_calls` with `finish_reason: "tool_calls"`. `reasoning_effort` can be set per request or by a setting.
+
+The extension calls `sendRequest`, iterates the response stream to collect every text and tool-call part, and returns a single `chat.completion` object. If the client disconnects, a cancellation token aborts the in-flight model request.
+
+## Engineering decisions
+
+**Authenticate every route.** Even `/v1/models` requires the bearer token. The comparison uses `crypto.timingSafeEqual` after a length check, so the token cannot be recovered by timing.
+
+**Loopback only, no CORS.** Binding to the loopback interface keeps other machines out. Sending no CORS headers keeps browser pages out, which matters more than it looks: a malicious page can otherwise make requests to localhost. The README is explicit that the trust boundary is the OS user account, and that the gateway must not be exposed through port forwarding, tunnels or reverse proxies.
+
+**Bounded input.** Bodies over 20 MB get a 413 and the socket is closed.
+
+**Content-free logs.** The output channel records method, path, status, model and latency. Prompts and completions never touch a log, so a shared screen or a support bundle does not leak them.
+
+**Fit the model's constraints, not the client's.** The stable `vscode.lm` API has no system role, so system and developer prompts become user messages. Consecutive same-role messages are merged because some models require strict user/assistant alternation, and that also puts parallel tool results in a single turn.
+
+**OpenAI-shaped errors.** Failures return `{"error": {"message", "type"}}` with 400 (malformed request or unsupported option such as streaming), 401 (bad token), 403 (model access not granted), 404 (unknown model or route), 413 (body too large), 429 (provider quota or rate limit) and 502 (other model errors), so standard SDK retry and error handling works unchanged.
+
+**One file, zero dependencies.** `extension.js` uses only Node built-ins and the VS Code API, which keeps the supply chain and the review surface small. CI syntax-checks it and packages a `.vsix` as a build artefact.
+
+**Responsible use is part of the design.** The README states that it is for personal, local development, that users must comply with their model provider's terms, including limits on automated or high-volume use, and that the project is not affiliated with GitHub or Microsoft.
+
+## Results & evidence
+
+- Works with curl and the OpenAI Python SDK, including tool calling with `tool_choice="required"`. The README carries runnable examples of both.
+- `examples/` wires it up as the OpenAI-compatible backend for TradingAgents through environment variables only.
+- CI runs `node --check` and builds the `.vsix` on every push to `main` and every pull request.
+
+There is no automated test suite yet. I am stating that plainly rather than dressing the CI checks up as tests.
+
+## Limitations & next steps
+
+- **No streaming.** `stream: true` is rejected with a 400; output is collected and returned in one response. Server-sent events are the first roadmap item.
+- **`usage` is always zero.** Token counts are not reported yet; `countTokens` is the planned fix.
+- **Text only, sampling parameters ignored.** Image and audio parts are dropped, and `temperature`, `max_tokens`, `stop` and similar fields are not forwarded.
+- **Copilot vendor only**, and only two endpoints: no embeddings, legacy completions or Responses API.
+- **VS Code must be running.** With several windows open, the first one owns the port.
+- **Next:** SSE streaming, token usage, a configurable vendor filter, token rotation commands, and integration tests with `@vscode/test-electron`.

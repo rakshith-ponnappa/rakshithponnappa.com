@@ -1,0 +1,110 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import AskPanel from '../components/AskPanel.astro';
+import Diagram from '../components/Diagram.astro';
+---
+
+<BaseLayout
+  title="Ask the runbook"
+  description="A retrieval-augmented assistant grounded only in this site's public content. It cites sources, refuses off-topic questions and publishes its evals."
+>
+  <section class="container-x page-head" data-ask-autorun>
+    <p class="eyebrow">Ask the runbook</p>
+    <h1>Ask about my work. <em class="serif">Get cited answers.</em></h1>
+    <p class="lede">
+      The assistant answers only from this site: case studies, project write-ups and the résumé. Every answer cites its sources. If
+      it can’t ground an answer, it says so.
+    </p>
+    <div class="panel"><AskPanel large autofocus /></div>
+  </section>
+
+  <section class="section container-x" aria-labelledby="how">
+    <div class="section-head">
+      <p class="eyebrow">How it works</p>
+      <h2 id="how" class="section-title">Small, boring, <em>and measured.</em></h2>
+    </div>
+    <ol class="steps">
+      <li>
+        <span class="mono n">01</span>
+        <h3>Build-time corpus</h3>
+        <p>Each deploy chunks the site’s content into a versioned <a class="link" href="/corpus.json">corpus.json</a>.</p>
+      </li>
+      <li>
+        <span class="mono n">02</span>
+        <h3>BM25 retrieval</h3>
+        <p>A dependency-free BM25 index runs at the edge in a Cloudflare Worker. The same code powers the in-browser fallback.</p>
+      </li>
+      <li>
+        <span class="mono n">03</span>
+        <h3>Guardrails</h3>
+        <p>Low-relevance questions are refused before any model call. Prompt-injection patterns are filtered, and context is delimited.</p>
+      </li>
+      <li>
+        <span class="mono n">04</span>
+        <h3>Grounded generation</h3>
+        <p>An open model on Workers AI answers from the retrieved chunks only. Citations are checked against what was retrieved.</p>
+      </li>
+      <li>
+        <span class="mono n">05</span>
+        <h3>Graceful degradation</h3>
+        <p>On quota or model errors it falls back to retrieval-only answers. The site never breaks because a model did.</p>
+      </li>
+      <li>
+        <span class="mono n">06</span>
+        <h3>Public evals</h3>
+        <p>Retrieval quality and refusal behaviour are measured on every build. <a class="link" href="/evals/">See the numbers →</a></p>
+      </li>
+    </ol>
+    <div class="dg"><Diagram src="/diagrams/ask-architecture.svg" alt="Request flow: the browser posts a question to the Cloudflare Worker, which applies the origin check, rate limit and injection filter, retrieves from the BM25 index built from corpus.json, refuses below the relevance threshold, otherwise calls Workers AI with delimited context, validates citations and returns the answer, falling back to retrieval-only on errors." /></div>
+  </section>
+</BaseLayout>
+
+<style>
+  .page-head {
+    padding-block: clamp(3rem, 7vw, 6rem) 0;
+  }
+  h1 {
+    margin-top: 1rem;
+    font-size: var(--step-4);
+    letter-spacing: -0.045em;
+    max-width: 18ch;
+  }
+  h1 em {
+    font-style: italic;
+    color: var(--fg-muted);
+    letter-spacing: -0.02em;
+  }
+  .lede {
+    margin-top: 1.25rem;
+  }
+  .panel {
+    margin-top: 2.5rem;
+  }
+  .steps {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+    gap: 1rem;
+  }
+  .steps li {
+    padding: 1.4rem;
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius);
+    background: var(--bg-raised);
+  }
+  .n {
+    font-size: 0.75rem;
+    color: var(--signal);
+  }
+  .steps h3 {
+    margin-top: 0.75rem;
+    font-size: 1.15rem;
+  }
+  .steps p {
+    margin-top: 0.5rem;
+    color: var(--fg-muted);
+    font-size: 0.95rem;
+  }
+  .dg {
+    margin-top: 2.5rem;
+  }
+</style>

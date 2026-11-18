@@ -1,0 +1,13 @@
+flowchart LR
+    G["git push / webhook"] --> J["Jenkins controller"]
+    J -->|"Kubernetes plugin<br/>podTemplate"| POD
+    subgraph POD["Ephemeral agent pod"]
+        H["hugo<br/>build site"] --> P["html-proofer<br/>link check"]
+        P --> D["docker<br/>build + push"]
+        D --> K["kubectl<br/>set image"]
+    end
+    SEC["K8s secrets<br/>kube-config, docker-config"] -.-> K
+    SEC -.-> D
+    D --> R["Docker Hub<br/>build number + latest"]
+    K -->|"rolling update"| S["Deployment<br/>hugo-app"]
+    R -.->|"pull"| S

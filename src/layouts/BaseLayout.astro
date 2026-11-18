@@ -1,0 +1,118 @@
+---
+import { Font } from 'astro:assets';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import CommandPalette from '../components/CommandPalette.astro';
+import { profile } from '../data/profile';
+import { THEME_SCRIPT, SPECULATION_RULES } from '../lib/inline-scripts.mjs';
+import '../styles/global.css';
+
+interface Props {
+  title?: string;
+  description?: string;
+  image?: string;
+  type?: 'website' | 'article' | 'profile';
+  jsonLd?: Record<string, unknown>[];
+  noindex?: boolean;
+}
+
+const {
+  title,
+  description: rawDescription = `${profile.headline} with 12+ years in landing zones, Kubernetes, SRE and secure delivery on Azure, AWS and GCP, including sandboxed infrastructure for AI agents.`,
+  image = '/og/default.png',
+  type = 'website',
+  jsonLd = [],
+  noindex = false,
+} = Astro.props;
+
+// Search snippets cut off around 160 characters; trim long summaries at a word boundary.
+const description = rawDescription.length > 160 ? rawDescription.slice(0, 157).replace(/[\s,;:–-]+\S*$/, '') + '…' : rawDescription;
+const fullTitle = title ? `${title} · ${profile.name}` : `${profile.name}: ${profile.headline}`;
+const canonical = new URL(Astro.url.pathname, Astro.site);
+const ogImage = new URL(image, Astro.site);
+
+const person = {
+  '@type': 'Person',
+  '@id': `${Astro.site}#person`,
+  name: profile.fullName,
+  alternateName: profile.name,
+  jobTitle: profile.headline,
+  description: profile.pitch,
+  url: Astro.site?.toString(),
+  image: new URL('/og/portrait.jpg', Astro.site).toString(),
+  email: `mailto:${profile.email}`,
+  address: { '@type': 'PostalAddress', addressLocality: 'Bengaluru', addressCountry: 'IN' },
+  alumniOf: [
+    { '@type': 'CollegeOrUniversity', name: 'Bharathidasan University' },
+    { '@type': 'CollegeOrUniversity', name: 'CMR Institute of Management Studies' },
+  ],
+  knowsAbout: ['Platform engineering', 'Kubernetes', 'Terraform', 'Azure', 'AWS', 'Google Cloud', 'DevSecOps', 'LLM evaluation', 'AI agents'],
+  sameAs: [profile.github, profile.linkedin],
+};
+const graph = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    { '@type': 'WebSite', '@id': `${Astro.site}#site`, url: Astro.site?.toString(), name: profile.name, publisher: { '@id': person['@id'] } },
+    person,
+    ...jsonLd,
+  ],
+};
+
+
+---
+
+<!doctype html>
+<html lang="en-GB" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>{fullTitle}</title>
+    <meta name="description" content={description} />
+    {!noindex && <link rel="canonical" href={canonical} />}
+    {noindex && <meta name="robots" content="noindex" />}
+    <meta name="author" content={profile.fullName} />
+    <meta name="theme-color" content="#0d1117" />
+    <meta name="color-scheme" content="dark light" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon.ico" sizes="32x32" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <link rel="sitemap" href="/sitemap-index.xml" />
+    <link rel="me" href={profile.github} />
+    <link rel="me" href={profile.linkedin} />
+
+    <meta property="og:type" content={type} />
+    <meta property="og:site_name" content={profile.name} />
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={description} />
+    {!noindex && <meta property="og:url" content={canonical} />}
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={fullTitle} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImage} />
+
+    <script is:inline set:html={THEME_SCRIPT} />
+    <script type="speculationrules" is:inline set:html={SPECULATION_RULES} />
+    <script type="application/ld+json" is:inline set:html={JSON.stringify(graph)} />
+
+    <Font cssVariable="--font-geist" preload />
+    <Font cssVariable="--font-instrument" preload={[{ style: 'italic' }]} />
+    <Font cssVariable="--font-geist-mono" />
+    <slot name="head" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <Header />
+    <main id="main" tabindex="-1">
+      <slot />
+    </main>
+    <Footer />
+    <CommandPalette />
+    <script>
+      import '../scripts/global.ts';
+    </script>
+  </body>
+</html>

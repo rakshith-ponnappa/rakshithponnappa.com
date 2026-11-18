@@ -1,0 +1,251 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { runEvals } from '../lib/evals';
+
+const r = await runEvals();
+const pct = (x: number) => `${Number.isInteger(+(x * 100).toFixed(1)) ? Math.round(x * 100) : (x * 100).toFixed(1)}%`;
+const fails = r.cases.filter((c) => !c.pass).length;
+const tiles = [
+  { k: 'hit@1', v: pct(r.metrics.hit1), d: 'right page ranked first' },
+  { k: 'hit@3', v: pct(r.metrics.hit3), d: 'right page in the top three' },
+  { k: 'mrr', v: r.metrics.mrr.toFixed(3), d: 'mean reciprocal rank' },
+  { k: 'refusal', v: pct(r.metrics.refusal), d: 'off-topic questions refused' },
+  { k: 'answer rate', v: pct(r.metrics.answered), d: 'on-topic questions answered' },
+  { k: 'p50 search', v: `${r.p50 < 1 ? r.p50.toFixed(2) : r.p50.toFixed(1)}ms`, d: `BM25 over ${r.chunks} chunks` },
+];
+---
+
+<BaseLayout
+  title="Evals"
+  description="Public, build-time evaluation of the Ask the runbook assistant: retrieval hit@k, MRR and refusal behaviour on a golden question set."
+>
+  <section class="container-x page-head">
+    <p class="eyebrow">Evals · run on every deploy</p>
+    <h1>The assistant, <em class="serif">measured in public.</em></h1>
+    <p class="lede">
+      Every build runs a golden set of {r.cases.length} on-topic questions and {r.negs.length} off-topic ones against the exact BM25 index
+      the Worker serves. If retrieval regresses, it shows up here first.
+    </p>
+    <p class="stamp mono">
+      corpus <span>{r.version}</span> · {r.chunks} chunks · score floor <span>{r.threshold}</span> · coverage floor <span>{r.minCoverage}</span> · ran{' '}
+      <time datetime={r.ranAt}>{r.ranAt.slice(0, 16).replace('T', ' ')} UTC</time>
+    </p>
+  </section>
+
+  <section class="container-x">
+    <ul class="tiles">
+      {
+        tiles.map((t) => (
+          <li class="reveal">
+            <span class="k mono">{t.k}</span>
+            <span class="v tabular">{t.v}</span>
+            <span class="d">{t.d}</span>
+          </li>
+        ))
+      }
+    </ul>
+  </section>
+
+  <section class="section container-x" aria-labelledby="golden">
+    <div class="section-head">
+      <p class="eyebrow">Golden set · {r.cases.length - fails}/{r.cases.length} passing</p>
+      <h2 id="golden" class="section-title">On-topic questions</h2>
+      <p class="lede">A case passes when an expected page ranks in the top three <em>and</em> the refusal gate lets the question through.</p>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Question</th><th>Top page</th><th class="num">Rank</th><th class="num">Score</th><th class="num">Coverage</th><th>Result</th></tr>
+        </thead>
+        <tbody>
+          {
+            r.cases.map((c) => (
+              <tr>
+                <td>{c.q}</td>
+                <td class="mono small">{c.top ?? '–'}</td>
+                <td class="num mono">{c.rank ?? '–'}</td>
+                <td class="num mono">{c.score.toFixed(2)}</td>
+                <td class="num mono">{c.coverage.toFixed(2)}</td>
+                <td>
+                  <span class="chip" data-tone={c.pass ? 'signal' : 'amber'}>
+                    {c.pass ? 'pass' : 'fail'}
+                  </span>
+                </td>
+              </tr>
+            ))
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="section container-x" aria-labelledby="neg">
+    <div class="section-head">
+      <p class="eyebrow">Refusals · {r.negs.filter((n) => n.refused).length}/{r.negs.length} refused</p>
+      <h2 id="neg" class="section-title">Off-topic questions</h2>
+      <p class="lede">These must be refused before any model is called. That keeps answers grounded and costs at zero.</p>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Question</th><th>Nearest page</th><th class="num">Score</th><th class="num">Coverage</th><th>Result</th></tr>
+        </thead>
+        <tbody>
+          {
+            r.negs.map((n) => (
+              <tr>
+                <td>{n.q}</td>
+                <td class="mono small">{n.top ?? '–'}</td>
+                <td class="num mono">{n.score.toFixed(2)}</td>
+                <td class="num mono">{n.coverage.toFixed(2)}</td>
+                <td>
+                  <span class="chip" data-tone={n.refused ? 'signal' : 'amber'}>
+                    {n.refused ? 'refused' : 'answered'}
+                  </span>
+                </td>
+              </tr>
+            ))
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="container-x notes">
+    <h2 class="eyebrow">Method & limits</h2>
+    <ul>
+      <li>The refusal gate has two signals: a minimum BM25 score, and IDF-weighted query coverage when a question mentions terms the corpus has never seen. Most off-topic questions are about something the site never mentions.</li>
+      <li>Retrieval and refusal are measured deterministically at build time. Generated answers are not scored here, because no model is called during the build.</li>
+      <li>At runtime the Worker also filters prompt-injection patterns, delimits context and drops any citation that doesn’t map to a retrieved chunk.</li>
+      <li>The golden set is small and written by me, so treat it as a regression guard, not a benchmark.</li>
+    </ul>
+  </section>
+</BaseLayout>
+
+<style>
+  .page-head {
+    padding-block: clamp(3rem, 7vw, 6rem) clamp(2rem, 4vw, 3rem);
+  }
+  h1 {
+    margin-top: 1rem;
+    font-size: var(--step-5);
+    letter-spacing: -0.05em;
+    line-height: 0.95;
+    max-width: 15ch;
+  }
+  h1 em {
+    font-style: italic;
+    color: var(--fg-muted);
+    letter-spacing: -0.02em;
+  }
+  .lede {
+    margin-top: 1.25rem;
+  }
+  .stamp {
+    margin-top: 1.5rem;
+    font-size: 0.75rem;
+    color: var(--fg-faint);
+  }
+  .stamp span {
+    color: var(--fg-muted);
+  }
+  .tiles {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+  }
+  @media (min-width: 640px) {
+    .tiles {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+  @media (min-width: 1100px) {
+    .tiles {
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
+  }
+  .tiles li {
+    display: grid;
+    gap: 0.35rem;
+    padding: 1.3rem;
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius);
+    background: var(--bg-raised);
+  }
+  .tiles .k {
+    font-size: 0.7rem;
+    color: var(--signal);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .tiles .v {
+    font-size: clamp(1.75rem, 1.4rem + 1.3vw, 2.5rem);
+    font-weight: 600;
+    letter-spacing: -0.04em;
+    line-height: 1.05;
+  }
+  .tiles .d {
+    font-size: 0.85rem;
+    color: var(--fg-muted);
+  }
+  .table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius);
+    background: var(--bg-raised);
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.92rem;
+  }
+  th,
+  td {
+    text-align: left;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--line-soft);
+    vertical-align: middle;
+  }
+  tr:last-child td {
+    border-bottom: 0;
+  }
+  th {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--fg-faint);
+    background: var(--bg-sunken);
+  }
+  .num {
+    text-align: right;
+  }
+  .small {
+    font-size: 0.75rem;
+    color: var(--fg-muted);
+  }
+  .notes {
+    margin-top: 1rem;
+  }
+  .notes ul {
+    margin-top: 1rem;
+    display: grid;
+    gap: 0.6rem;
+    max-width: 52rem;
+    color: var(--fg-muted);
+  }
+  .notes li {
+    padding-left: 1rem;
+    position: relative;
+  }
+  .notes li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.75em;
+    width: 0.45rem;
+    height: 1px;
+    background: var(--signal);
+  }
+</style>

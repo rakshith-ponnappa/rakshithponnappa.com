@@ -1,0 +1,129 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Icon from '../components/Icon.astro';
+---
+
+<BaseLayout title="404 · Route not found" description="This route doesn't exist." noindex>
+  <section class="container-x wrap">
+    <div class="incident card">
+      <header class="mono">
+        <span class="sev"><span class="dot" data-tone="amber" data-pulse></span> INC-404 · SEV-4</span>
+        <span>status: <strong>investigating</strong></span>
+      </header>
+      <h1>404 <em class="serif">route not found.</em></h1>
+      <p class="lede">The page you asked for isn’t in the service mesh. Nothing is down; this one just never existed or has moved.</p>
+
+      <pre class="log mono" aria-label="Request log"><span class="t">[edge]</span>  GET <span data-path>/unknown</span>
+<span class="t">[router]</span> no route matched · 0 upstreams
+<span class="t">[runbook]</span> RB-404 suggests the steps below</pre>
+
+      <h2 class="eyebrow">Runbook RB-404</h2>
+      <ol class="steps">
+        <li><span class="mono">01</span> Check the URL for typos.</li>
+        <li><span class="mono">02</span> <button class="kbd-btn link" type="button" data-cmdk-open>Search everything</button> <kbd data-mod aria-hidden="true">⌘K</kbd></li>
+        <li><span class="mono">03</span> Fail over to a known-good route:</li>
+      </ol>
+      <div class="routes">
+        <a class="btn btn-primary" href="/"><Icon name="arrow-left" /> Home</a>
+        <a class="btn" href="/work/">Work</a>
+        <a class="btn" href="/projects/">Projects</a>
+        <a class="btn" href="/contact/">Open a ticket</a>
+      </div>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .wrap {
+    padding-top: clamp(3rem, 8vw, 7rem);
+  }
+  .incident {
+    max-width: 48rem;
+    margin-inline: auto;
+    padding: clamp(1.5rem, 4vw, 2.75rem);
+  }
+  header {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    font-size: 0.75rem;
+    color: var(--fg-faint);
+    padding-bottom: 1rem;
+    border-bottom: 1px dashed var(--line);
+  }
+  .sev {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--amber);
+  }
+  header strong {
+    color: var(--amber);
+    font-weight: 500;
+  }
+  h1 {
+    margin-top: 1.75rem;
+    font-size: var(--step-5);
+    letter-spacing: -0.05em;
+    line-height: 0.95;
+  }
+  h1 em {
+    font-style: italic;
+    color: var(--fg-muted);
+    letter-spacing: -0.02em;
+  }
+  .lede {
+    margin-top: 1.25rem;
+  }
+  .log {
+    margin-top: 1.75rem;
+    padding: 1rem 1.2rem;
+    border-radius: 10px;
+    background: var(--bg-sunken);
+    border: 1px solid var(--line-soft);
+    font-size: 0.8rem;
+    line-height: 1.8;
+    color: var(--fg-muted);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+  .t {
+    color: var(--signal);
+  }
+  h2 {
+    margin-top: 2rem;
+  }
+  .steps {
+    margin-top: 0.9rem;
+    display: grid;
+    gap: 0.6rem;
+  }
+  .steps li {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+  .steps .mono {
+    font-size: 0.75rem;
+    color: var(--fg-faint);
+  }
+  .kbd-btn {
+    background: none;
+    border: 0;
+    padding: 0;
+    font: inherit;
+    cursor: pointer;
+  }
+  .routes {
+    margin-top: 1.25rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+  }
+</style>
+
+<script>
+  const el = document.querySelector('[data-path]');
+  if (el) el.textContent = location.pathname.slice(0, 120);
+</script>

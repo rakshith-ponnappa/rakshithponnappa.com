@@ -1,0 +1,27 @@
+flowchart TD
+  DC["NTT data centre<br/>source estate"]
+  subgraph CODE["Terraform module library · built from scratch"]
+    MOD["VM · SQL MI · Oracle · LB · Front Door<br/>Key Vault · DES · ASR · RSV modules"]
+    PIPE["Terraform Enterprise + Harness<br/>OPA policy gates"]
+  end
+  subgraph PRI["Azure · primary region"]
+    FD["Front Door +<br/>load balancers"]
+    VM["500+ VMs · 5 apps<br/>CMK disk encryption"]
+    DB["SQL Managed Instances<br/>+ Oracle"]
+  end
+  subgraph DR["Azure · DR region"]
+    RSV["Recovery Services Vault<br/>private endpoints · CMK"]
+    REP["Replica disks<br/>batch recovery plans"]
+    DB2["SQL MI geo-secondary"]
+  end
+  DC -- "3 cutover waves<br/>10+ apps live" --> VM
+  MOD --> PIPE
+  PIPE --> FD
+  PIPE --> VM
+  PIPE --> DB
+  PIPE --> RSV
+  FD --> VM
+  VM --> DB
+  VM -- "ASR replication" --> REP
+  RSV --- REP
+  DB -- "failover group" --> DB2

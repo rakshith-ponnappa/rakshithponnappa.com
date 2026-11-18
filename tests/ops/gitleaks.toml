@@ -1,0 +1,22 @@
+# gitleaks config for the repo scan (local: tests/ops/gitleaks.test.ts; CI: GITLEAKS_CONFIG in ci.yml).
+# Default rules, minus generated, vendored and scratch output that is never committed.
+title = "rakshithponnappa.dev"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Generated, vendored and local scratch output"
+paths = [
+  '''(^|/)node_modules/''',
+  '''(^|/)dist/''',
+  '''(^|/)\.build[^/]*/''',
+  '''(^|/)test-results/''',
+  '''(^|/)playwright-report/''',
+  '''(^|/)blob-report/''',
+  '''(^|/)\.astro/''',
+  '''(^|/)\.wrangler[^/]*/''',
+  '''(^|/)\.scratch/''',
+  '''(^|/)\.git/''',
+  '''package-lock\.json$''',
+]

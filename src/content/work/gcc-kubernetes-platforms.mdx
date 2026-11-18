@@ -1,0 +1,67 @@
+---
+title: "Kubernetes & GitLab platforms for GCC telecom, banking and government"
+client: "DU Telecom, Etisalat, RAK Bank, Dubai Municipality, PDO"
+industry: "Telecom, banking & government (GCC)"
+employer: "Ozone (Huco FZCO)"
+period: "2019 – 2022"
+role: "Site Reliability Engineer (on-site)"
+summary: "On the ground in Dubai for three years and Oman for one, I built and ran Kubernetes platforms on GKE, EKS, AKS and Tanzu, self-hosted GitLab on Kubernetes with security-integrated pipelines for RAK Bank and DU Telecom, and the networking and streaming plumbing around them for five regulated GCC clients."
+clouds: ["AWS", "Azure", "GCP", "VMware Tanzu"]
+stack: ["GKE", "EKS", "AKS", "Tanzu (TKGS)", "vSphere 7", "GitLab (self-hosted)", "Istio", "Harbor", "Fluentd", "Jaeger", "Kasten", "AWS Kinesis", "Confluent Kafka", "Private Link", "VPC peering", "IAM", "Cloud NAT"]
+metrics:
+  - { value: "3 yrs", label: "on-site in Dubai" }
+  - { value: "1 yr", label: "on-site in Oman" }
+  - { value: "5", label: "named GCC clients" }
+  - { value: "4", label: "Kubernetes platforms: GKE, EKS, AKS, TKGS" }
+diagram: "/diagrams/gcc-kubernetes-platforms.svg"
+diagramAlt: "Self-hosted GitLab on Kubernetes runs security-integrated pipelines that publish to Harbor and deploy to GKE, EKS, AKS and Tanzu clusters, which share a common layer of Istio, Fluentd, Jaeger and Kasten, sit behind network policies, Cloud NAT, Private Link, VPC peering and IAM, and feed real-time pipelines on Kinesis and Confluent Kafka."
+order: 10
+featured: true
+---
+
+## Context
+
+From 2019 to 2022 I worked as a Site Reliability Engineer for Ozone (Huco FZCO), delivering on site in the GCC: three years in Dubai and one year in Oman. The client list was a cross-section of the region's regulated sectors: DU Telecom and Etisalat in telecom, RAK Bank in banking, Dubai Municipality in government, and Petroleum Development Oman (PDO) in energy.
+
+Each client arrived with a different cloud preference and a different starting point. Across those engagements, the work came back to the same core: build Kubernetes platforms the client can run in production, give their teams a delivery pipeline they control, and wire both into networks that a bank or a government security team will sign off.
+
+## Constraints
+
+- **Regulated clients.** Banks, telecoms and government bodies care where their source code, images and pipelines live. A managed SaaS toolchain was not always an option.
+- **No single cloud.** The work spanned GCP, AWS, Azure and on-premises VMware. Patterns had to carry across GKE, EKS, AKS and Tanzu without pretending the four are the same.
+- **Private by default.** Clusters and data services needed controlled egress and private connectivity, not public endpoints.
+- **On-site delivery.** Being on the ground made me the person the client's team turned to when something broke, so whatever I built had to be operable by them.
+
+## What I did
+
+1. **Self-hosted GitLab on Kubernetes.** For RAK Bank and DU Telecom I built GitLab running on Kubernetes, with security checks built into the pipelines end to end rather than added as a separate stage after delivery. Keeping it self-hosted kept code and pipelines inside the client's own environment.
+2. **Managed Kubernetes on three clouds.** I deployed and operated clusters on GKE, EKS and AKS, with network policies to restrict pod-to-pod traffic and Cloud NAT for controlled outbound access.
+3. **Tanzu on vSphere 7 for Blockchain-as-a-Service.** I built Tanzu Kubernetes Grid Service (TKGS) on vSphere 7 to host a Blockchain-as-a-Service platform, bringing Kubernetes to an on-premises VMware estate.
+4. **A common cloud-native layer.** I ran Istio as the service mesh, Harbor as the container registry, Fluentd for logging, Jaeger for tracing and Kasten for Kubernetes backup and recovery, all in production.
+5. **Multi-cloud network security.** I governed connectivity and access across AWS, Azure and GCP using Private Link, VPC peering and IAM.
+6. **Real-time data pipelines.** I built streaming pipelines on AWS Kinesis and on Kafka in Confluent Cloud.
+7. **Standardised CI/CD.** Alongside GitLab, I standardised delivery across Jenkins, GitHub, AWS CodePipeline and Azure Pipelines for multi-environment releases, because not every client team was on the same toolchain.
+
+## Key decisions
+
+| Decision | Why | Trade-off |
+|---|---|---|
+| Self-host GitLab on Kubernetes for the bank and the telecom | Regulated clients want source, pipelines and scan results on infrastructure they control, and running GitLab on Kubernetes reuses the platform we were already operating. | We owned GitLab upgrades, storage and backups instead of a SaaS provider. |
+| Security checks inside the pipeline | A check that runs on every pipeline is harder to skip than a review at the end. | Longer pipelines and more findings for teams to triage. |
+| One tooling layer across clusters | Istio, Harbor, Fluentd, Jaeger and Kasten on every cluster meant one way to route, store images, log, trace and restore, whichever cloud it ran on. | Each component is another production system to patch and upgrade. |
+| Private connectivity over public endpoints | Private Link, VPC peering and Cloud NAT keep traffic off the public internet and make egress auditable. | More networking to design and debug, especially across clouds. |
+| TKGS for the on-premises blockchain platform | The estate was vSphere 7; TKGS brought Kubernetes to it without moving the workload to a public cloud. | Tanzu adds its own lifecycle on top of vSphere. |
+
+## Outcome
+
+- Kubernetes platforms in production on **four** foundations: GKE, EKS, AKS and Tanzu on vSphere 7.
+- Self-hosted GitLab on Kubernetes with security-integrated pipelines for **RAK Bank and DU Telecom**.
+- A shared production layer of Istio, Harbor, Fluentd, Jaeger and Kasten.
+- Real-time pipelines on Kinesis and Confluent Kafka, inside a network governed with Private Link, VPC peering and IAM.
+- **Four years** of on-site delivery, three in Dubai and one in Oman, across **five** named clients.
+
+## What I'd do next
+
+- **GitOps for cluster configuration.** With the same tooling layer on every cluster, the obvious next step is to declare it once in Git and reconcile it everywhere, rather than maintaining it cluster by cluster.
+- **Policy as code at admission.** Network policies set the baseline; admission policies would stop non-compliant workloads before they are scheduled, which suits regulated clients.
+- **Shared reliability targets.** I would put service-level objectives on the platform itself, using the tracing and logging already in place, so the client's team can see when it is drifting before users do.

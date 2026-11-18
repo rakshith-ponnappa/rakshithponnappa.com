@@ -1,0 +1,255 @@
+---
+/**
+ * Progressive-enhancement topology behind the hero: the portrait card is the core node, ringed by the
+ * real roles, case studies and projects. A ~10 KB gz hand-written WebGL2 module is fetched lazily, and
+ * only on capable devices, after `load`, when idle and once the hero is in view. Without it (reduced
+ * motion, low-end, no WebGL2), nothing renders and the link list stays hidden. See docs/HERO3D.md.
+ */
+import { getCollection } from 'astro:content';
+import { experience } from '../data/profile';
+import { buildEntities, type Entity } from '../scripts/hero3d/entities';
+
+interface Props {
+  class?: string;
+  /** Internal: renders one level of the topology link list (the component recurses through Astro.self). */
+  branch?: { nodes: Entity[]; ids: number[] };
+}
+const { class: className, branch } = Astro.props;
+const nodes = branch?.nodes ?? buildEntities(experience, await getCollection('work'), await getCollection('projects'));
+const kids = (i: number) => nodes.flatMap((e, j) => (e.p === i ? [j] : []));
+const KIND = ['Role', 'Case study', 'Project'];
+---
+
+{
+  branch ? (
+    <ul>
+      {branch.ids.map((i) => {
+        const e = nodes[i];
+        const sub = kids(i);
+        return (
+          <li>
+            <a href={e.href} data-k={e.k} data-p={e.p}>
+              <span class="k" aria-hidden="true">
+                {e.key}
+              </span>
+              <span class="t">
+                <span class="sr">{KIND[e.k]}: </span>
+                {e.title}
+              </span>
+              <span class="m">
+                <span class="sr">, </span>
+                {e.meta}
+              </span>
+            </a>
+            {sub.length > 0 && <Astro.self branch={{ nodes, ids: sub }} />}
+          </li>
+        );
+      })}
+    </ul>
+  ) : (
+    <div class:list={['hero3d', className]} data-hero3d>
+      <nav class="topo" aria-label="Career topology" data-topo hidden>
+        <Astro.self branch={{ nodes, ids: kids(-1) }} />
+      </nav>
+    </div>
+  )
+}
+
+<style>
+  .hero3d {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    user-select: none;
+    overflow: hidden;
+    contain: strict;
+    opacity: 0;
+    transition: opacity var(--t-5) var(--ease-out);
+  }
+  .hero3d[data-ready='true'] {
+    opacity: 1;
+  }
+  .hero3d :global(canvas) {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .hero3d {
+      display: none;
+    }
+  }
+
+  /* The link list: moved after the portrait column at mount; each link is visually hidden until it is
+     hovered (as its node) or focused, then it becomes the node's label, positioned via CSSOM. */
+  .topo {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+  }
+  .topo ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .topo a,
+  .sr {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .topo a.on {
+    display: grid;
+    gap: 0.2rem;
+    width: max-content;
+    max-width: min(15.5rem, 70vw);
+    height: auto;
+    overflow: visible;
+    clip-path: none;
+    white-space: normal;
+    padding: 0.5rem 0.7rem 0.55rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    background: color-mix(in oklch, var(--bg-raised) 94%, transparent);
+    backdrop-filter: blur(8px);
+    box-shadow: var(--shadow);
+    color: var(--fg);
+    text-decoration: none;
+    font-size: 0.78rem;
+    line-height: 1.35;
+    pointer-events: auto;
+    animation: topo-in var(--t-2) var(--ease-out);
+  }
+  /* Invisible hit area over the node itself, so hovering or clicking the dot follows the link. */
+  .topo a.on::before {
+    content: '';
+    position: absolute;
+    left: var(--hx);
+    top: var(--hy);
+    width: 34px;
+    height: 34px;
+    margin: -17px 0 0 -17px;
+    border-radius: 50%;
+  }
+  .topo a.on:hover .t {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .k {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.01em;
+    overflow-wrap: anywhere;
+    color: var(--signal);
+  }
+  [data-k='1'] .k {
+    color: var(--azure);
+  }
+  [data-k='2'] .k {
+    color: var(--fg-muted);
+  }
+  .t {
+    font-weight: 500;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+  }
+  .m {
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+    color: var(--fg-muted);
+  }
+  @keyframes topo-in {
+    from {
+      opacity: 0;
+      transform: translateY(2px);
+    }
+  }
+</style>
+
+<script>
+  type NavigatorHints = Navigator & {
+    deviceMemory?: number;
+    connection?: { saveData?: boolean; effectiveType?: string };
+  };
+
+  const mounted = new WeakMap<HTMLElement, Promise<() => void>>();
+  const force = () => new URLSearchParams(location.search).get('hero3d') === 'force';
+
+  function capable(): boolean {
+    const nav = navigator as NavigatorHints;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return false;
+    if (force()) return true;
+    if (nav.connection?.saveData === true || /2g/.test(nav.connection?.effectiveType ?? '')) return false;
+    if ((nav.deviceMemory ?? 8) < 4 || (nav.hardwareConcurrency || 8) < 4) return false;
+    return window.innerWidth >= 768;
+  }
+
+  /** The topology needs the portrait in the right-hand column; single-column layouts skip the download. */
+  function roomy(el: HTMLElement): boolean {
+    const p = el.closest('.hero')?.querySelector('.portrait');
+    return !!p && p.getBoundingClientRect().left > window.innerWidth * 0.5;
+  }
+
+  function whenIdleAfterLoad(cb: () => void) {
+    const idle = () =>
+      'requestIdleCallback' in window ? window.requestIdleCallback(cb, { timeout: 2500 }) : setTimeout(cb, 200);
+    if (document.readyState === 'complete') idle();
+    else window.addEventListener('load', idle, { once: true });
+  }
+
+  function whenInView(el: HTMLElement, cb: () => void) {
+    const io = new IntersectionObserver((entries) => {
+      if (entries.some((e) => e.isIntersecting)) {
+        io.disconnect();
+        cb();
+      }
+    });
+    io.observe(el);
+  }
+
+  function mount(el: HTMLElement) {
+    if (mounted.has(el) || (!force() && !roomy(el))) return;
+    const p = import('../scripts/hero3d/index')
+      .then(({ mountHero3D }) => mountHero3D(el, { force: force() }))
+      .catch((err) => {
+        console.warn('[hero3d] failed to load', err);
+        return () => {};
+      });
+    mounted.set(el, p);
+
+    // Tear down if the user switches to reduced motion mid-session, or the page is swapped out.
+    const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const teardown = () => {
+      motion.removeEventListener('change', onMotion);
+      document.removeEventListener('astro:before-swap', teardown);
+      void p.then((dispose) => dispose());
+    };
+    const onMotion = () => motion.matches && teardown();
+    motion.addEventListener('change', onMotion);
+    document.addEventListener('astro:before-swap', teardown);
+  }
+
+  function init() {
+    if ((document as Document & { prerendering?: boolean }).prerendering) {
+      document.addEventListener('prerenderingchange', init, { once: true });
+      return;
+    }
+    if (!capable()) return;
+    const els = document.querySelectorAll<HTMLElement>('[data-hero3d]');
+    if (!els.length) return;
+    whenIdleAfterLoad(() => els.forEach((el) => whenInView(el, () => mount(el))));
+  }
+
+  init();
+  document.addEventListener('astro:page-load', init);
+</script>
