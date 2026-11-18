@@ -75,7 +75,8 @@ test.describe('command palette', () => {
     await page.locator('[data-cmdk-input]').fill('sudo hire rakshith');
     await page.keyboard.press('Enter');
     await expect(page.locator('[data-cmdk-out]')).toContainText('permission granted');
-    await expect(page).toHaveURL(/\/contact\/\?topic=hiring$/, { timeout: 5_000 });
+    // The typed reply plays before navigating; WebKit on shared CI runners is slow to finish the load.
+    await expect(page).toHaveURL(/\/contact\/\?topic=hiring$/, { timeout: 15_000 });
     await expect(page.locator('#c-topic')).toHaveValue('Hiring');
   });
 });
