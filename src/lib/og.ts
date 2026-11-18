@@ -61,12 +61,6 @@ function fonts() {
       weight: 500,
       style: 'normal',
     },
-    {
-      name: 'Instrument Serif',
-      data: font('@fontsource/instrument-serif', 'instrument-serif-latin-400-italic.woff'),
-      weight: 400,
-      style: 'italic',
-    },
   ];
   return fontCache;
 }
@@ -321,14 +315,14 @@ export async function defaultTree() {
             {
               flexDirection: 'column',
               marginTop: 30,
-              fontFamily: 'Instrument Serif',
-              fontStyle: 'italic',
-              fontSize: 40,
-              lineHeight: 1.12,
+              fontSize: 34,
+              fontWeight: 500,
+              letterSpacing: '-0.01em',
+              lineHeight: 1.2,
             },
             [
-              h('div', { color: c.fg }, 'building the platforms enterprises run on,'),
-              h('div', { color: c.signal }, 'and the infrastructure AI agents are trained in.'),
+              h('div', { color: c.fg }, 'Building the platforms enterprises run on,'),
+              h('div', { color: c.muted }, 'and the infrastructure AI agents are trained in.'),
             ],
           ),
         ]),

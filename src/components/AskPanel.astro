@@ -307,18 +307,6 @@ const suggestions = [
     font-size: 0.8rem;
     color: var(--fg-faint);
   }
-  .out :global(.thinking i) {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--signal);
-    animation: blink 1s steps(2) infinite;
-  }
-  @keyframes blink {
-    50% {
-      opacity: 0.2;
-    }
-  }
   .fine {
     margin-top: 1rem;
     font-size: 0.75rem;
@@ -508,7 +496,7 @@ const suggestions = [
       busy = true;
       out.hidden = false;
       const thinking = el('p', 'thinking');
-      thinking.append(el('i'), document.createTextNode('retrieving context · generating a grounded answer'));
+      thinking.append(document.createTextNode('Retrieving context and writing a grounded answer…'));
       out.replaceChildren(thinking);
       let res: AskResult;
       try {

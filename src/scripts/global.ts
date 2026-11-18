@@ -11,24 +11,6 @@ document.querySelectorAll<HTMLButtonElement>('[data-theme-toggle]').forEach((b) 
   b.addEventListener('click', (e) => toggleTheme({ x: e.clientX, y: e.clientY })),
 );
 
-// Pointer-follow glow for .glow cards (one delegated listener, rAF-throttled).
-let raf = 0;
-document.addEventListener(
-  'pointermove',
-  (e) => {
-    if (raf) return;
-    raf = requestAnimationFrame(() => {
-      raf = 0;
-      const card = (e.target as HTMLElement).closest?.<HTMLElement>('.glow');
-      if (!card) return;
-      const r = card.getBoundingClientRect();
-      card.style.setProperty('--mx', `${e.clientX - r.left}px`);
-      card.style.setProperty('--my', `${e.clientY - r.top}px`);
-    });
-  },
-  { passive: true },
-);
-
 // Copy-to-clipboard buttons: <button data-copy="text">.
 document.addEventListener('click', (e) => {
   const btn = (e.target as HTMLElement).closest<HTMLElement>('[data-copy]');
