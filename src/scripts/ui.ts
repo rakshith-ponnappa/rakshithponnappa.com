@@ -41,6 +41,13 @@ export function toggleTheme(origin?: { x: number; y: number }) {
   const r = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y));
   document.documentElement.dataset.vt = 'theme';
   const vt = doc.startViewTransition(() => setTheme(next));
+  // WebKit can defer the update callback (busy or throttled page); the toggle must never look dead, so apply
+  // the theme directly if it hasn't landed shortly after the click. setTheme is idempotent.
+  setTimeout(() => {
+    if (document.documentElement.dataset.theme === next) return;
+    (vt as unknown as { skipTransition?: () => void }).skipTransition?.();
+    setTheme(next);
+  }, 400);
   vt.ready.then(() => {
     document.documentElement.animate(
       { clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${r}px at ${x}px ${y}px)`] },
