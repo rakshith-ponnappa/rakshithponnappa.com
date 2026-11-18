@@ -114,10 +114,14 @@ await check('no private email address is published', async () => {
 });
 
 if (PROD) {
-  await check('www redirects to the apex', async () => {
-    const r = await get('https://www.rakshithponnappa.dev/work/?from=smoke');
-    expect(r.status === 301, `got ${r.status}`);
-    expect((r.headers.get('location') ?? '').startsWith('https://rakshithponnappa.dev/work/?from=smoke'), `location ${r.headers.get('location')}`);
+  await check('alias domains redirect to the canonical site', async () => {
+    const aliases = ['www.rakshithponnappa.dev', 'rakshithponnappa.com', 'www.rakshithponnappa.com'];
+    for (const host of aliases) {
+      const r = await get(`https://${host}/work/?from=smoke`);
+      expect(r.status === 301, `${host} → ${r.status}`);
+      expect((r.headers.get('location') ?? '').startsWith('https://rakshithponnappa.dev/work/?from=smoke'), `${host} → ${r.headers.get('location')}`);
+    }
+    return `${aliases.length} aliases`;
   });
 }
 
