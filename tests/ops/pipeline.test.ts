@@ -22,7 +22,7 @@ describe('CI/CD workflow', () => {
 
   it('builds once and runs every suite against that build', () => {
     const r = runs(ci.jobs.test);
-    for (const cmd of ['npm run build', 'npm run pdf', 'npm run test:ai', 'npm run test:content', 'npm run test:design', 'npm run test:ops', 'npm run test:e2e']) expect(r).toContain(cmd);
+    for (const cmd of ['npm run build', 'npm run pdf', 'npm run test:ai', 'npm run test:content', 'npm run test:design', 'npm run test:design:pages', 'npm run test:ops', 'npm run test:e2e']) expect(r).toContain(cmd);
   });
 
   it('deploys only from main, only after tests and the secret scan pass, one deploy at a time', () => {

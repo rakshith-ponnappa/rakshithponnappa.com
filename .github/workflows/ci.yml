@@ -102,6 +102,10 @@ jobs:
         # narrowing it (docs/TEST-REPORT.md, X-1). Install all three until test:e2e accepts a project filter.
         run: npx playwright install --with-deps chromium firefox webkit
 
+      - name: Design quality, rendered pages (Impeccable URL scan of the built site)
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: npm run test:design:pages -- --github
+
       - name: E2E (Playwright, chromium)
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         run: npm run test:e2e -- --project=chromium

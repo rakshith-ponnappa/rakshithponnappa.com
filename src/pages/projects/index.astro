@@ -14,8 +14,8 @@ const projects = (await getCollection('projects')).sort((a, b) => a.data.order -
   description="Open-source AI systems, platform templates and tools: multi-agent screening, agentic trading, local RAG with evals, sandbox conformance, landing-zone Terraform and GitLab upgrade playbooks."
 >
   <section class="container-x page-head">
-    <p class="eyebrow">Projects · {projects.length} public repositories</p>
     <h1>Built in the open, <em class="serif">written up honestly.</em></h1>
+    <p class="subhead">{projects.length} public repositories</p>
     <p class="lede">
       Every project has a README you can trust and a written list of what it doesn’t do yet. Most ship with tests and CI. Pick one for the
       engineering deep-dive.
