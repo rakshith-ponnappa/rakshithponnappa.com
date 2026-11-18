@@ -29,7 +29,7 @@ flowchart LR
 | Browser | `npm run test:e2e` | User journeys on Chromium, Firefox, WebKit and mobile, plus axe accessibility, keyboard, motion, CSP-violation and link checks. |
 | Secret scan | `ci.yml` › `gitleaks` | Full git history scanned with `tests/ops/gitleaks.toml`. |
 | Deploy | `ci.yml` › `deploy` | Runs only on `main`, only after `test` and `gitleaks` pass, one at a time, in the `production` environment. Records the live version, then deploys the downloaded artifact. Nothing is rebuilt. |
-| Smoke test | `scripts/smoke.mjs` | Waits until the footer shows the deployed commit, then checks every sitemap page, key files and content types, security headers and CSP, 404 handling, the www → apex redirect, `/api/health`, an on-topic and an off-topic question to the assistant, cross-origin rejection, Turnstile enforcement on the contact form (no email is sent) and that no private email address is published. |
+| Smoke test | `scripts/smoke.mjs` | Waits until the footer shows the deployed commit, then checks every sitemap page, key files and content types, security headers and CSP, 404 handling, the alias-domain redirects (www and .com → rakshithponnappa.dev), `/api/health`, an on-topic and an off-topic question to the assistant, cross-origin rejection, Turnstile enforcement on the contact form (no email is sent) and that no private email address is published. |
 | Rollback | `ci.yml` › `deploy` | If the smoke test fails, `wrangler rollback` restores the previous version (code and assets together), re-runs the smoke test and marks the run failed. |
 | Monitor | `monitor.yml` | The same smoke test every 6 hours. A failure opens (or comments on) one `live-incident` issue; the next pass closes it. |
 | Dependencies | `dependabot.yml` | Weekly grouped npm and GitHub Actions updates, each going through this same pipeline. |
@@ -52,7 +52,7 @@ production at any time with `node scripts/smoke.mjs`.
 
 | Item | Where | Value |
 |---|---|---|
-| `CLOUDFLARE_API_TOKEN` | repo secret | A Cloudflare API token from the **Edit Cloudflare Workers** template, scoped to this account and the `rakshithponnappa.dev` zone. |
+| `CLOUDFLARE_API_TOKEN` | repo secret | A Cloudflare API token from the **Edit Cloudflare Workers** template plus Zone DNS Edit, scoped to this account and the `rakshithponnappa.dev` and `rakshithponnappa.com` zones. |
 | `CLOUDFLARE_ACCOUNT_ID` | repo variable | The Cloudflare account ID. |
 | `PUBLIC_TURNSTILE_SITE_KEY` | repo variable | The Turnstile site key (public by design). |
 | `production` environment | repo settings | Restricted to the `main` branch. |

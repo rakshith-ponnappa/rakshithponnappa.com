@@ -168,8 +168,10 @@ per question.
      unset, no widget is rendered and the Worker skips Turnstile only if `TURNSTILE_SECRET` is also unset.
 5. Deploy: normally the pipeline does this on every merge to `main` (see [docs/PIPELINE.md](PIPELINE.md)).
    Manual fallback: `npm run cf:deploy`.
-6. **Custom domains** are declared in `wrangler.jsonc` (apex) and `worker/www-redirect/wrangler.jsonc` (www → apex
-   301), so Cloudflare creates the DNS records and certificates on deploy.
+6. **Custom domains** are declared in `wrangler.jsonc` (the canonical `rakshithponnappa.dev`) and
+   `worker/www-redirect/wrangler.jsonc` (alias hosts `www.rakshithponnappa.dev`, `rakshithponnappa.com` and
+   `www.rakshithponnappa.com`, each a 301 to the canonical origin with path and query kept), so Cloudflare creates
+   the DNS records and certificates on deploy. The CI deploy token must include both zones.
 7. Check that it works: `curl https://rakshithponnappa.dev/api/health`. The Worker logs are in Workers → Observability.
 
 ## Local development and tests

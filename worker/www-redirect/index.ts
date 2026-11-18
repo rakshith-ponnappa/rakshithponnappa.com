@@ -1,4 +1,5 @@
-// www.rakshithponnappa.dev → https://rakshithponnappa.dev, keeping path and query.
+// Alias hosts (www.rakshithponnappa.dev, rakshithponnappa.com, www.rakshithponnappa.com) → https://rakshithponnappa.dev,
+// keeping path and query, so the site has one canonical address.
 export default {
   fetch(request: Request): Response {
     const url = new URL(request.url);

@@ -48,7 +48,7 @@ src/
   lib/retrieval.ts       dependency-free BM25, shared by Worker, browser fallback and evals
   lib/corpus.ts          builds /corpus.json and /llms-full.txt from the content
   pages/                 routes, plus endpoints for corpus.json, llms.txt, resume.json, security.txt and og/*.png
-worker/                  Cloudflare Worker (/api/ask, /api/contact) and its tests; www-redirect/ is the www → apex Worker
+worker/                  Cloudflare Worker (/api/ask, /api/contact) and its tests; www-redirect/ 301s alias domains (www, .com) to the canonical site
 tests/                   AI, content, ops, E2E/QA suites and persona scripts (see docs/TESTING.md)
 .github/workflows/       CI/CD (ci.yml) and the live monitor (monitor.yml)
 diagrams/*.mmd           Mermaid sources → public/diagrams/*.{dark,light}.svg
