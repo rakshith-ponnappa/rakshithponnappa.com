@@ -76,6 +76,12 @@ jobs:
         env:
           QA_JUNIT: test-results/junit-content.xml
 
+      - name: Design quality (Impeccable detector, pinned; exceptions in .impeccable/config.json)
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        env:
+          DO_NOT_TRACK: '1'
+        run: npm run test:design -- --github
+
       - name: Ops suite (wrangler config, _headers, deploy dry-run, wrangler dev stack)
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         run: npm run test:ops

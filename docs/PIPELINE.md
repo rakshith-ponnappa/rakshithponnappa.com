@@ -25,6 +25,7 @@ flowchart LR
 | Unit | `npm test` | Worker handlers, validation, retrieval, rate limiting, email building, hero topology maths. |
 | AI | `npm run test:ai` | Retrieval quality on the golden set, refusal of off-topic and adversarial questions, the crawler's view of the site. The same evals publish to [/evals](https://rakshithponnappa.com/evals/). |
 | Content guard | `npm run test:content` | No private emails or phone numbers other than the public ones, no internal hostnames or IPs, no client-confidential terms, no unsupported credential claims. Runs over the sources and the built HTML. |
+| Design quality | `npm run test:design` | Impeccable's deterministic anti-slop detector over the built HTML (no AI-generated tells, no tiny text, contrast). Reasoned exceptions in `.impeccable/config.json`. |
 | Ops | `npm run test:ops` | `wrangler.jsonc` bindings and vars (no secrets in config), `_headers`, a deploy dry run, the local Worker stack, a working-tree gitleaks scan, and the pipeline itself (`tests/ops/pipeline.test.ts`). |
 | Browser | `npm run test:e2e` | User journeys on Chromium, Firefox, WebKit and mobile, plus axe accessibility, keyboard, motion, CSP-violation and link checks. |
 | Secret scan | `ci.yml` › `gitleaks` | Full git history scanned with `tests/ops/gitleaks.toml`. |

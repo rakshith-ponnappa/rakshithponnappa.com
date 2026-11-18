@@ -38,3 +38,7 @@ blob-report/
 
 # local build output dirs (.build-main, .build-qa-b, …)
 .build-*/
+
+# Impeccable: keep shared detector config, ignore caches and screenshots
+.impeccable/*
+!.impeccable/config.json

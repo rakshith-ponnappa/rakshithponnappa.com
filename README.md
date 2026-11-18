@@ -28,6 +28,7 @@ Personal site of **Rakshith S P**, Principal Platform Engineer. The concept is t
   - every chart has a text equivalent;
   - full keyboard support, including <kbd>⌘K</kbd> and <kbd>/</kbd>.
 - Every number on the site is real. The assistant's retrieval quality is measured on every build at [/evals](https://rakshithponnappa.com/evals/).
+- No "AI-generated look": Impeccable's detector runs on every build as a CI gate (see [docs/TESTING.md](docs/TESTING.md)).
 - Tested from five perspectives: unit, AI (retrieval, refusal, adversarial), content and confidentiality, ops (config, deploy, secrets, pipeline) and real browsers (journeys, accessibility, CSP). See [docs/TESTING.md](docs/TESTING.md).
 
 ## Delivery

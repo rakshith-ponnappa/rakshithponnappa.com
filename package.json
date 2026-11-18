@@ -29,6 +29,7 @@
     "test:ai": "vitest run --config tests/vitest.config.ts tests/ai",
     "test:ops": "vitest run --config tests/vitest.config.ts tests/ops",
     "test:content": "vitest run --config tests/vitest.config.ts tests/content",
+    "test:design": "npx -y impeccable@4.9.2 detect dist/ --no-advisory",
     "test:all": "npm test && npm run test:ai && npm run test:content && npm run test:ops && npm run --if-present test:e2e",
     "test:summary": "node tests/support/write-summary.mjs"
   },
