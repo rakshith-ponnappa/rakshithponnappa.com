@@ -165,7 +165,7 @@ function topBar(path: string) {
         width: 40,
         height: 40,
       }),
-      h('div', { ...mono(21, c.fg, { fontWeight: 500 }) }, 'rakshithponnappa.dev'),
+      h('div', { ...mono(21, c.fg, { fontWeight: 500 }) }, 'rakshithponnappa.com'),
       path ? h('div', mono(21, c.faint), path) : null,
     ]),
     statusPill(),

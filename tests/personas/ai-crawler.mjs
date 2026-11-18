@@ -23,7 +23,7 @@ async function task(name, fn) {
 
 // Ground truth, from src/data/profile.ts (the single source of truth).
 const TRUTH = {
-  email: 'contact@rakshithponnappa.dev',
+  email: 'contact@rakshithponnappa.com',
   phone: /\+91[\s-]?90354[\s-]?00153/,
   employer: 'Ensono',
   clouds: ['Azure', 'AWS', 'GCP'],
@@ -141,7 +141,7 @@ await task('Fact check: no wrong or inconsistent facts across the files', async 
   const edu = all.map(([f, t]) => [f, /Bharathidasan/.test(t), /CMR Institute/.test(t)]);
   for (const [f, a, b] of edu) if (f !== '/llms.txt' && (!a || !b)) issues.push({ sev: 2, f, text: 'Education missing one of the two degrees.' });
   // Internal links in llms.txt resolve locally.
-  const links = [...new Set([...src['/llms.txt'].matchAll(/https:\/\/rakshithponnappa\.dev(\/[^)\s]*)/g)].map((m) => m[1]))];
+  const links = [...new Set([...src['/llms.txt'].matchAll(/https:\/\/rakshithponnappa\.com(\/[^)\s]*)/g)].map((m) => m[1]))];
   const dead = [];
   for (const l of links) {
     const res = await fetch(BASE + l, { method: 'HEAD' });

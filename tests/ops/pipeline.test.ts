@@ -54,7 +54,7 @@ describe('live monitor workflow', () => {
     expect(mon.on).toHaveProperty('schedule');
     expect(mon.permissions).toEqual({ contents: 'read', issues: 'write' });
     const r = runs(mon.jobs.smoke);
-    expect(r).toContain('scripts/smoke.mjs https://rakshithponnappa.dev');
+    expect(r).toContain('scripts/smoke.mjs https://rakshithponnappa.com');
     expect(r).toContain('gh issue create');
     expect(r).toContain('gh issue close');
   });

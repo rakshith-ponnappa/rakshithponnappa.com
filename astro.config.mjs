@@ -31,7 +31,7 @@ const cspMetaFirst = {
 const fs = (pkg, file) => `./node_modules/${pkg}/files/${file}`;
 
 export default defineConfig({
-  site: 'https://rakshithponnappa.dev',
+  site: 'https://rakshithponnappa.com',
   trailingSlash: 'ignore',
   build: { format: 'directory' },
   integrations: [

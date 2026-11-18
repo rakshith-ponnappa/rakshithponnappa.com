@@ -1,10 +1,10 @@
-# rakshithponnappa.dev
+# rakshithponnappa.com
 
-[![CI/CD](https://github.com/rakshith-ponnappa/rakshithponnappa.dev/actions/workflows/ci.yml/badge.svg)](https://github.com/rakshith-ponnappa/rakshithponnappa.dev/actions/workflows/ci.yml) [![Live monitor](https://github.com/rakshith-ponnappa/rakshithponnappa.dev/actions/workflows/monitor.yml/badge.svg)](https://github.com/rakshith-ponnappa/rakshithponnappa.dev/actions/workflows/monitor.yml)
+[![CI/CD](https://github.com/rakshith-ponnappa/rakshithponnappa.com/actions/workflows/ci.yml/badge.svg)](https://github.com/rakshith-ponnappa/rakshithponnappa.com/actions/workflows/ci.yml) [![Live monitor](https://github.com/rakshith-ponnappa/rakshithponnappa.com/actions/workflows/monitor.yml/badge.svg)](https://github.com/rakshith-ponnappa/rakshithponnappa.com/actions/workflows/monitor.yml)
 
 Personal site of **Rakshith S P**, Principal Platform Engineer. The concept is that the site behaves like a live production system: it has a status-page hero, a career rendered as a distributed trace, case studies written as postmortems, and a small retrieval-grounded assistant whose evals are public.
 
-**Live:** https://rakshithponnappa.dev · **Résumé:** [/resume](https://rakshithponnappa.dev/resume/) · **For LLMs:** [/llms.txt](https://rakshithponnappa.dev/llms.txt)
+**Live:** https://rakshithponnappa.com · **Résumé:** [/resume](https://rakshithponnappa.com/resume/) · **For LLMs:** [/llms.txt](https://rakshithponnappa.com/llms.txt)
 
 ## Stack
 
@@ -27,7 +27,7 @@ Personal site of **Rakshith S P**, Principal Platform Engineer. The concept is t
   - skip link, visible focus and semantic landmarks;
   - every chart has a text equivalent;
   - full keyboard support, including <kbd>⌘K</kbd> and <kbd>/</kbd>.
-- Every number on the site is real. The assistant's retrieval quality is measured on every build at [/evals](https://rakshithponnappa.dev/evals/).
+- Every number on the site is real. The assistant's retrieval quality is measured on every build at [/evals](https://rakshithponnappa.com/evals/).
 - Tested from five perspectives: unit, AI (retrieval, refusal, adversarial), content and confidentiality, ops (config, deploy, secrets, pipeline) and real browsers (journeys, accessibility, CSP). See [docs/TESTING.md](docs/TESTING.md).
 
 ## Delivery
@@ -48,7 +48,7 @@ src/
   lib/retrieval.ts       dependency-free BM25, shared by Worker, browser fallback and evals
   lib/corpus.ts          builds /corpus.json and /llms-full.txt from the content
   pages/                 routes, plus endpoints for corpus.json, llms.txt, resume.json, security.txt and og/*.png
-worker/                  Cloudflare Worker (/api/ask, /api/contact) and its tests; www-redirect/ 301s alias domains (www, .com) to the canonical site
+worker/                  Cloudflare Worker (/api/ask, /api/contact) and its tests; www-redirect/ 301s alias domains (.dev, www) to the canonical site
 tests/                   AI, content, ops, E2E/QA suites and persona scripts (see docs/TESTING.md)
 .github/workflows/       CI/CD (ci.yml) and the live monitor (monitor.yml)
 diagrams/*.mmd           Mermaid sources → public/diagrams/*.{dark,light}.svg
@@ -81,4 +81,4 @@ One-time Cloudflare setup is in [docs/BACKEND.md](docs/BACKEND.md).
 
 ## Licence
 
-© Rakshith Siragaje Ponnappa. All rights reserved. The code, content, case studies, diagrams, design and portrait are published for review as part of a portfolio; see [LICENSE](LICENSE). Ask before reusing any of it: contact@rakshithponnappa.dev.
+© Rakshith Siragaje Ponnappa. All rights reserved. The code, content, case studies, diagrams, design and portrait are published for review as part of a portfolio; see [LICENSE](LICENSE). Ask before reusing any of it: contact@rakshithponnappa.com.

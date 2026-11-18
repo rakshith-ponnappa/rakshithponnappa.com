@@ -39,13 +39,13 @@
 
   "vars": {
     "AI_MODEL": "@cf/meta/llama-3.1-8b-instruct-fp8-fast",
-    "CONTACT_FROM": "contact@rakshithponnappa.dev"
+    "CONTACT_FROM": "contact@rakshithponnappa.com"
   },
   // Secrets (never commit): `npx wrangler secret put TURNSTILE_SECRET` and `npx wrangler secret put CONTACT_TO`.
 
   "observability": { "enabled": true },
 
-  // Custom domain on the rakshithponnappa.dev zone (Cloudflare creates the DNS record and certificate).
+  // Custom domain on the rakshithponnappa.com zone (Cloudflare creates the DNS record and certificate).
   // www is a separate one-file Worker that 301s to the apex: worker/www-redirect/.
-  "routes": [{ "pattern": "rakshithponnappa.dev", "custom_domain": true }]
+  "routes": [{ "pattern": "rakshithponnappa.com", "custom_domain": true }]
 }

@@ -2,4 +2,4 @@ User-agent: *
 Allow: /
 Disallow: /api/
 
-Sitemap: https://rakshithponnappa.dev/sitemap-index.xml
+Sitemap: https://rakshithponnappa.com/sitemap-index.xml

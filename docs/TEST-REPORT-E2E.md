@@ -48,7 +48,7 @@ A `securitypolicyviolation` listener was installed with addInitScript on all 32 
 **B1 · Serious · a11y (WCAG 2.5.3 Label in Name)**: `src/components/Header.astro:32`. The visible text of the ⌘K trigger is "Search or ask ⌘K/Ctrl K" (the `kbd` is aria-hidden but still visible), and the accessible name is `aria-label="Search or ask"`. Axe flags it on every page in both themes.
 Repro: `npm run test:a11y`. Fix: drop the `aria-label` and let the visible `.cmdk-hint` text name the button. Alternatively, put the shortcut in `aria-keyshortcuts="Meta+K Control+K"` and make the label start with the visible text.
 
-**B2 · Low · SEO/links**: `src/layouts/BaseLayout.astro:29,69`. The 404 page (`noindex`) emits `<link rel="canonical" href="https://rakshithponnappa.dev/404/">`, and that URL itself returns 404. The link check fails on it.
+**B2 · Low · SEO/links**: `src/layouts/BaseLayout.astro:29,69`. The 404 page (`noindex`) emits `<link rel="canonical" href="https://rakshithponnappa.com/404/">`, and that URL itself returns 404. The link check fails on it.
 Fix: render the canonical (and `og:url`) only when `!noindex`.
 
 **B3 · Low · SEO**: Meta descriptions are too long on 20 routes: `/` (224 chars), `/projects/` (189), 9 project pages (181–223) and all 9 case studies (229–375). Search engines truncate at about 160 chars.

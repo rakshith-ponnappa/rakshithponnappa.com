@@ -25,7 +25,7 @@ Run one against a local preview or production:
 
 ```sh
 npm run build && npx astro preview            # http://127.0.0.1:4321
-timeout 120 node tests/personas/recruiter.mjs  # BASE=https://rakshithponnappa.dev for production
+timeout 120 node tests/personas/recruiter.mjs  # BASE=https://rakshithponnappa.com for production
 ```
 
 Environment: `BASE` (site origin), `PERSONA_OUT` (results, default `test-results/persona-runs`), `CHROME_PATH`,

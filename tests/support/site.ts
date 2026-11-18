@@ -7,8 +7,8 @@ export const ROOT = fileURLToPath(new URL('../..', import.meta.url)).replace(/\/
 /** Built site under test. Defaults to ./.build-qa; QA_BUILD_DIR (relative to the repo root) overrides it. */
 export const BUILD = join(ROOT, process.env.QA_BUILD_DIR || '.build-qa');
 export const RESULTS = join(ROOT, 'test-results');
-export const SITE_ORIGIN = 'https://rakshithponnappa.dev';
-export const OWNER_EMAIL = 'contact@rakshithponnappa.dev';
+export const SITE_ORIGIN = 'https://rakshithponnappa.com';
+export const OWNER_EMAIL = 'contact@rakshithponnappa.com';
 
 /**
  * Assets the owner has announced but not shipped yet. Link checks REPORT these as pending instead of

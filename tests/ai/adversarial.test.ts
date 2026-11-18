@@ -17,7 +17,7 @@ requireBuild();
 const corpus = JSON.parse(readFileSync(join(BUILD, 'corpus.json'), 'utf8')) as { docs: { url: string; text: string }[] };
 const corpusUrls = new Set(corpus.docs.map((d) => d.url));
 const ON_TOPIC = 'What is TalentLens?';
-const ORIGIN = 'https://rakshithponnappa.dev';
+const ORIGIN = 'https://rakshithponnappa.com';
 
 type AskBody = { answer: string; citations: { id: string; title: string; url: string }[]; mode: string; excerpts?: string[] };
 type AiFn = (model: string, input: Record<string, unknown>) => Promise<unknown>;
@@ -31,7 +31,7 @@ function makeEnv(ai: AiFn = async () => ({ response: 'TalentLens is a multi-agen
     EMAIL: { send: vi.fn() },
     AI_MODEL: '@cf/test/model',
     CONTACT_TO: 'inbox@example.com',
-    CONTACT_FROM: 'contact@rakshithponnappa.dev',
+    CONTACT_FROM: 'contact@rakshithponnappa.com',
   } as unknown as Env;
   return { env, run };
 }
@@ -52,7 +52,7 @@ function retrievedUrls(run: ReturnType<typeof vi.fn>): string[] {
   return [...user.matchAll(/<context id="\d+" title="[^"]*" url="([^"]*)">/g)].map((m) => m[1]);
 }
 
-const FOREIGN = /(https?:\/\/(?!(www\.)?rakshithponnappa\.dev)[^\s)\]]+|\bwww\.(?!rakshithponnappa)[^\s)\]]+|javascript:|data:text)/i;
+const FOREIGN = /(https?:\/\/(?!(www\.)?rakshithponnappa\.(com|dev))[^\s)\]]+|\bwww\.(?!rakshithponnappa)[^\s)\]]+|javascript:|data:text)/i;
 
 async function ask(env: Env, run: ReturnType<typeof vi.fn>, question: unknown) {
   const res = await worker.fetch(post({ question }), env);
@@ -183,9 +183,9 @@ describe('malicious or broken model output is sanitised', () => {
   });
 
   it('keeps first-party links that exist in the corpus', async () => {
-    const { env, run } = answerWith({ response: 'TalentLens [1] is described at https://rakshithponnappa.dev/projects/talentlens/ in full.' });
+    const { env, run } = answerWith({ response: 'TalentLens [1] is described at https://rakshithponnappa.com/projects/talentlens/ in full.' });
     const { body } = await ask(env, run, ON_TOPIC);
-    expect(body.answer).toContain('https://rakshithponnappa.dev/projects/talentlens/');
+    expect(body.answer).toContain('https://rakshithponnappa.com/projects/talentlens/');
   });
 
   it('drops out-of-range citations [9] and [0], keeps [1]', async () => {

@@ -20,7 +20,7 @@ const want = {
   availability: /Open to (new )?roles|available/i,
   contact: /@|\+91|mailto|Contact|Open a ticket/i,
 };
-const contactDirect = /@rakshithponnappa\.dev|\+91/;
+const contactDirect = /@rakshithponnappa\.com|\+91/;
 
 await task(s, 'Find name, title, seniority, location, availability, contact in first viewport (no scroll)', async () => {
   const found = Object.fromEntries(Object.entries(want).map(([k, re]) => [k, re.test(fold)]));

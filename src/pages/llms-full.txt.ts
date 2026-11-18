@@ -3,7 +3,7 @@ import { buildCorpus } from '../lib/corpus';
 
 export const GET: APIRoute = async ({ site }) => {
   const { version, docs } = await buildCorpus();
-  const out: string[] = [`# rakshithponnappa.dev: full text (corpus ${version})`, ''];
+  const out: string[] = [`# rakshithponnappa.com: full text (corpus ${version})`, ''];
   let last = '';
   for (const d of docs) {
     const page = d.url.split('#')[0];

@@ -104,7 +104,7 @@ describe('citation post-processing', () => {
       'See  and https://github.com/rakshith-ponnappa/talentlens.',
     );
     expect(stripUnknownUrls('[click](https://evil.example) [ok](/a/)', urls)).toBe('click [ok](/a/)');
-    expect(stripUnknownUrls('www.evil.example https://rakshithponnappa.dev/b/', urls)).toBe(' https://rakshithponnappa.dev/b/');
+    expect(stripUnknownUrls('www.evil.example https://rakshithponnappa.com/b/', urls)).toBe(' https://rakshithponnappa.com/b/');
     const r = postProcess('Visit https://phish.example/login now [1].', hits, urls);
     expect(r.answer).toBe('Visit now [1].');
   });
@@ -124,7 +124,7 @@ describe('citation post-processing', () => {
 
 describe('email building', () => {
   const base = {
-    from: 'contact@rakshithponnappa.dev',
+    from: 'contact@rakshithponnappa.com',
     to: 'inbox@example.com',
     name: 'Ada Lovelace',
     email: 'ada@example.com',
@@ -139,11 +139,11 @@ describe('email building', () => {
 
   it('builds a minimal RFC 5322 message', () => {
     const { headers, body } = split(buildRawEmail(base));
-    expect(headers).toContain('From: "Portfolio contact form" <contact@rakshithponnappa.dev>');
+    expect(headers).toContain('From: "Portfolio contact form" <contact@rakshithponnappa.com>');
     expect(headers).toContain('To: <inbox@example.com>');
     expect(headers).toContain('Reply-To: "Ada Lovelace" <ada@example.com>');
     expect(headers).toContain('Date: Wed, 18 Nov 2026 05:00:00 GMT');
-    expect(headers.find((h) => h.startsWith('Message-ID: '))).toMatch(/^Message-ID: <[0-9a-f-]{36}@rakshithponnappa\.dev>$/);
+    expect(headers.find((h) => h.startsWith('Message-ID: '))).toMatch(/^Message-ID: <[0-9a-f-]{36}@rakshithponnappa\.com>$/);
     expect(headers).toContain('Content-Type: text/plain; charset=utf-8');
     expect(body).toBe('Name: Ada Lovelace\r\nEmail: ada@example.com\r\n\r\nHello\r\nWorld — ünïcode');
   });
@@ -184,11 +184,11 @@ describe('origin check', () => {
 
   it.each([
     'https://rakshithponnappa-dev.workers.dev',
-    'https://rakshithponnappa.dev',
-    'https://www.rakshithponnappa.dev',
+    'https://rakshithponnappa.com',
+    'https://www.rakshithponnappa.com',
   ])('allows %s', (o) => expect(isAllowedOrigin(req(o))).toBe(true));
 
-  it.each([undefined, 'null', 'https://evil.example', 'https://rakshithponnappa.dev.evil.example', 'http://rakshithponnappa.dev', 'https://localhost:4321', 'http://localhost.evil.example'])(
+  it.each([undefined, 'null', 'https://evil.example', 'https://rakshithponnappa.com.evil.example', 'http://rakshithponnappa.com', 'https://localhost:4321', 'http://localhost.evil.example'])(
     'rejects %s',
     (o) => expect(isAllowedOrigin(req(o))).toBe(false),
   );
@@ -196,7 +196,7 @@ describe('origin check', () => {
   it('trusts localhost origins only when the Worker itself runs on localhost', () => {
     expect(isAllowedOrigin(req('http://localhost:4321', 'http://localhost:8787/api/ask'))).toBe(true);
     expect(isAllowedOrigin(req('http://127.0.0.1:4321', 'http://127.0.0.1:8787/api/ask'))).toBe(true);
-    expect(isAllowedOrigin(req('http://localhost:4321', 'https://rakshithponnappa.dev/api/ask'))).toBe(false);
+    expect(isAllowedOrigin(req('http://localhost:4321', 'https://rakshithponnappa.com/api/ask'))).toBe(false);
     expect(isAllowedOrigin(req('http://localhost'))).toBe(false);
   });
 });
