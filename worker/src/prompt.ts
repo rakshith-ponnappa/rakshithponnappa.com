@@ -59,7 +59,7 @@ function urlAllowed(url: string, allowed: Set<string>): boolean {
   if (allowed.has(u)) return true;
   try {
     const parsed = new URL(u.startsWith('www.') ? `https://${u}` : u);
-    if (/^(www\.)?rakshithponnappa\.dev$/.test(parsed.hostname)) return allowed.has(parsed.pathname);
+    if (/^(www\.)?rakshithponnappa\.(com|dev)$/.test(parsed.hostname)) return allowed.has(parsed.pathname);
   } catch {
     /* not a URL */
   }

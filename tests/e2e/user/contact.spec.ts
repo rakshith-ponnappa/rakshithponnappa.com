@@ -69,12 +69,12 @@ test.describe('contact form', () => {
     await submit(page);
     expect((await res).status()).toBe(target === 'stack' ? 503 : 404);
     await expect(page.locator('[data-handoff]')).toBeVisible();
-    await expect(page.locator('[data-handoff] a[href^="mailto:"]')).toHaveAttribute('href', 'mailto:contact@rakshithponnappa.dev');
+    await expect(page.locator('[data-handoff] a[href^="mailto:"]')).toHaveAttribute('href', 'mailto:contact@rakshithponnappa.com');
     if (capturesMailto) {
       await expect.poll(() => page.evaluate(() => (window as unknown as { __mailto?: string }).__mailto ?? '')).toMatch(/^mailto:/);
       const mailto = await page.evaluate(() => (window as unknown as { __mailto: string }).__mailto);
       const u = new URL(mailto);
-      expect(u.pathname).toBe('contact@rakshithponnappa.dev');
+      expect(u.pathname).toBe('contact@rakshithponnappa.com');
       expect(u.searchParams.get('subject')).toBe(`[Consulting] from ${valid.name}`);
       expect(u.searchParams.get('body')).toContain(valid.message);
     }

@@ -88,7 +88,7 @@ describe('JSON-LD', () => {
     const person = all.find((n) => isType(n, 'Person'));
     expect(person, 'Person').toBeTruthy();
     expect(person!.name).toEqual(expect.any(String));
-    expect(person!.url).toMatch(/^https:\/\/rakshithponnappa\.dev\/?$/);
+    expect(person!.url).toMatch(/^https:\/\/rakshithponnappa\.com\/?$/);
     expect(Array.isArray(person!.sameAs) && (person!.sameAs as string[]).length).toBeGreaterThanOrEqual(2);
     for (const s of person!.sameAs as string[]) expect(s).toMatch(/^https:\/\//);
     const profile = all.find((n) => isType(n, 'ProfilePage'));

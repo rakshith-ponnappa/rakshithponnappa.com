@@ -1,6 +1,6 @@
 # Test report
 
-Consolidated QA report for rakshithponnappa.dev, 2026-11-18. Strategy: [TESTING.md](TESTING.md). Browser detail
+Consolidated QA report for rakshithponnappa.com, 2026-11-18. Strategy: [TESTING.md](TESTING.md). Browser detail
 (all engines, visual, Lighthouse): [TEST-REPORT-E2E.md](TEST-REPORT-E2E.md). Live-user personas:
 [LIVE-USER-TESTING.md](LIVE-USER-TESTING.md).
 
@@ -89,7 +89,7 @@ Fix: strip tags (`text.replace(/<\/?[a-z][^>]*>/gi, '')`) or escape `<`/`>` in `
 renumbered, then flip the `it.fails`.
 
 **BUG-2 · Low · SEO / links.** `src/layouts/BaseLayout.astro:88`. The 404-canonical fix (`:71`, rendered only when
-`!noindex`) didn't cover `og:url`: the 404 page still emits `<meta property="og:url" content="https://rakshithponnappa.dev/404/">`,
+`!noindex`) didn't cover `og:url`: the 404 page still emits `<meta property="og:url" content="https://rakshithponnappa.com/404/">`,
 and that URL returns 404. Fails `tests/qa/links.spec.ts:32`.
 Fix: `{!noindex && <meta property="og:url" content={canonical} />}` (same guard as the canonical).
 

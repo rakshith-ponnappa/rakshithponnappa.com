@@ -94,7 +94,7 @@ The history must survive between builds. Either commit `public/status-history.js
 before building so nothing has to be committed:
 
 ```yaml
-- run: node scripts/status-record.mjs --pull https://rakshithponnappa.dev/status-history.json || true
+- run: node scripts/status-record.mjs --pull https://rakshithponnappa.com/status-history.json || true
 - run: npm run build
 - run: npm run status:record
 - run: npx wrangler deploy

@@ -2,7 +2,7 @@
 // Post-deploy smoke test against a live origin. Read-only apart from two Ask questions and one contact request
 // that Turnstile rejects before any email is sent. Exits 1 if any check fails.
 //
-//   node scripts/smoke.mjs                                   https://rakshithponnappa.dev
+//   node scripts/smoke.mjs                                   https://rakshithponnappa.com
 //   node scripts/smoke.mjs https://example.com --sha abc1234 also wait until the footer shows this commit
 //
 // Used by the deploy job (failure → automatic rollback) and the scheduled monitor (failure → incident issue).
@@ -13,10 +13,10 @@ const opt = (name) => {
   const i = args.indexOf(name);
   return i >= 0 ? args[i + 1] : undefined;
 };
-const BASE = (args[0] && !args[0].startsWith('--') ? args[0] : 'https://rakshithponnappa.dev').replace(/\/$/, '');
+const BASE = (args[0] && !args[0].startsWith('--') ? args[0] : 'https://rakshithponnappa.com').replace(/\/$/, '');
 const SHA = opt('--sha')?.slice(0, 7);
-const PROD = BASE === 'https://rakshithponnappa.dev';
-const UA = 'rakshithponnappa-smoke/1.0 (+https://rakshithponnappa.dev/status/)';
+const PROD = BASE === 'https://rakshithponnappa.com';
+const UA = 'rakshithponnappa-smoke/1.0 (+https://rakshithponnappa.com/status/)';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const bust = (url) => `${url}${url.includes('?') ? '&' : '?'}smoke=${Date.now()}`;
@@ -69,7 +69,7 @@ if (SHA) {
 
 await check('every sitemap page returns 200 HTML', async () => {
   const xml = await (await get('/sitemap-0.xml')).text();
-  const urls = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1].replace('https://rakshithponnappa.dev', BASE));
+  const urls = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1].replace('https://rakshithponnappa.com', BASE));
   expect(urls.length >= 20, `sitemap lists only ${urls.length} URLs`);
   const bad = [];
   for (let i = 0; i < urls.length; i += 6) {
@@ -127,11 +127,11 @@ await check('no private email address is published', async () => {
 
 if (PROD) {
   await check('alias domains redirect to the canonical site', async () => {
-    const aliases = ['www.rakshithponnappa.dev', 'rakshithponnappa.com', 'www.rakshithponnappa.com'];
+    const aliases = ['rakshithponnappa.dev', 'www.rakshithponnappa.dev', 'www.rakshithponnappa.com'];
     for (const host of aliases) {
       const r = await getWithRetry(`https://${host}/work/?from=smoke`);
       expect(r.status === 301, `${host} → ${r.status}`);
-      expect((r.headers.get('location') ?? '').startsWith('https://rakshithponnappa.dev/work/?from=smoke'), `${host} → ${r.headers.get('location')}`);
+      expect((r.headers.get('location') ?? '').startsWith('https://rakshithponnappa.com/work/?from=smoke'), `${host} → ${r.headers.get('location')}`);
     }
     return `${aliases.length} aliases`;
   });

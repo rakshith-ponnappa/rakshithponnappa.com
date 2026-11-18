@@ -4,10 +4,10 @@
   "main": "index.ts",
   "compatibility_date": "2026-11-01",
   "workers_dev": false,
-  // Every alias host 301s to the canonical https://rakshithponnappa.dev (see index.ts).
+  // Every alias host 301s to the canonical https://rakshithponnappa.com (see index.ts).
   "routes": [
+    { "pattern": "rakshithponnappa.dev", "custom_domain": true },
     { "pattern": "www.rakshithponnappa.dev", "custom_domain": true },
-    { "pattern": "rakshithponnappa.com", "custom_domain": true },
     { "pattern": "www.rakshithponnappa.com", "custom_domain": true }
   ]
 }

@@ -21,7 +21,7 @@ Consult these guides before working on related tasks:
 - [Adding styles or using Tailwind](https://docs.astro.build/en/guides/styling/)
 - [Supporting multiple languages](https://docs.astro.build/en/guides/internationalization/)
 
-## Project conventions (rakshithponnappa.dev)
+## Project conventions (rakshithponnappa.com)
 
 - `src/data/profile.ts` is the single source of truth for résumé data. Never duplicate facts elsewhere.
 - Strict CSP is on (`security.csp` in `astro.config.mjs`). Do not use inline `style=""` attributes. Use classes, `data-*` attributes or `attr()`.

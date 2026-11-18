@@ -26,10 +26,10 @@ jobs:
         with:
           node-version: 24
 
-      - name: Smoke test https://rakshithponnappa.dev
+      - name: Smoke test https://rakshithponnappa.com
         id: smoke
         continue-on-error: true
-        run: node scripts/smoke.mjs https://rakshithponnappa.dev | tee smoke.txt
+        run: node scripts/smoke.mjs https://rakshithponnappa.com | tee smoke.txt
 
       - name: Open or update the incident issue
         if: ${{ steps.smoke.outcome == 'failure' }}

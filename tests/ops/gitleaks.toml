@@ -1,6 +1,6 @@
 # gitleaks config for the repo scan (local: tests/ops/gitleaks.test.ts; CI: GITLEAKS_CONFIG in ci.yml).
 # Default rules, minus generated, vendored and scratch output that is never committed.
-title = "rakshithponnappa.dev"
+title = "rakshithponnappa.com"
 
 [extend]
 useDefault = true

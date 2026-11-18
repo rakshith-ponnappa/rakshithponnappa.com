@@ -26,7 +26,8 @@ export function json(body: unknown, status = 200, extra: Record<string, string> 
   });
 }
 
-const ALLOWED_ORIGINS = new Set(['https://rakshithponnappa.dev', 'https://www.rakshithponnappa.dev']);
+// The canonical site, plus the former .dev origin so pages loaded before the move can still call the API.
+const ALLOWED_ORIGINS = new Set(['https://rakshithponnappa.com', 'https://www.rakshithponnappa.com', 'https://rakshithponnappa.dev', 'https://www.rakshithponnappa.dev']);
 const LOCALHOST = /^http:\/\/(localhost|127\.0\.0\.1)(:\d{1,5})?$/;
 const LOCAL_HOSTNAMES = new Set(['localhost', '127.0.0.1']);
 

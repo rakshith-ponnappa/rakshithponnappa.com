@@ -1,6 +1,6 @@
 // Content and confidentiality rules (AGENTS.md "Content rules"). Each rule returns the offending matches in a
 // text; tests/content/guard.test.ts runs them over src/content/**, src/data/** and the built HTML.
-export const OWNER_EMAIL = 'contact@rakshithponnappa.dev';
+export const OWNER_EMAIL = 'contact@rakshithponnappa.com';
 /** Digits of the one public phone number, +91 90354 00153 (with and without the country code). */
 const OWNER_PHONE = ['919035400153', '9035400153'];
 

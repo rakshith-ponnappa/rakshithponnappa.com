@@ -42,7 +42,7 @@ Source: `diagrams/ask-architecture.mmd` (render with `node scripts/diagrams.mjs 
 
 All API responses are JSON with `Cache-Control: no-store`. There are no CORS headers, so the API is
 same-origin only. A POST is rejected with **403** unless its `Origin` header is the request's own origin,
-`https://rakshithponnappa.dev`, `https://www.rakshithponnappa.dev` or `http://localhost:<port>`.
+`https://rakshithponnappa.com`, `https://www.rakshithponnappa.com` or `http://localhost:<port>`.
 Requests with no `Origin` header (for example plain `curl`) are also rejected. To test with curl, add `-H 'Origin: http://localhost:8787'`.
 
 ### `GET /api/health`
@@ -155,12 +155,12 @@ per question.
 ## Owner setup (one-time)
 
 1. Create a free Cloudflare account. Then authenticate locally: `npx wrangler login`.
-2. Add the domain **rakshithponnappa.dev** as a zone in the dashboard. It is already registered with Cloudflare Registrar, so the nameservers are already correct.
+2. Add the domain **rakshithponnappa.com** as a zone in the dashboard. It is already registered with Cloudflare Registrar, so the nameservers are already correct.
 3. **Email Routing** (zone → Email → Email Routing): enable it, add your personal inbox as a destination
    and click the verification link it receives. Store that inbox as a secret, `npx wrangler secret put CONTACT_TO`,
    so it is never committed. The `send_email` binding can only deliver to verified destinations. Add a routing
-   rule **contact@rakshithponnappa.dev → your inbox**: that is the public address shown on the site and résumé.
-4. **Turnstile** (dashboard → Turnstile): add a widget for `rakshithponnappa.dev` and `www.rakshithponnappa.dev`
+   rule **contact@rakshithponnappa.com → your inbox**: that is the public address shown on the site and résumé.
+4. **Turnstile** (dashboard → Turnstile): add a widget for `rakshithponnappa.com` and `www.rakshithponnappa.com`
    (add `localhost` for dev if you like). Then:
    - secret key: `npx wrangler secret put TURNSTILE_SECRET`
    - site key: set `PUBLIC_TURNSTILE_SITE_KEY=<site key>` in the build environment (a GitHub Actions variable in
@@ -168,11 +168,11 @@ per question.
      unset, no widget is rendered and the Worker skips Turnstile only if `TURNSTILE_SECRET` is also unset.
 5. Deploy: normally the pipeline does this on every merge to `main` (see [docs/PIPELINE.md](PIPELINE.md)).
    Manual fallback: `npm run cf:deploy`.
-6. **Custom domains** are declared in `wrangler.jsonc` (the canonical `rakshithponnappa.dev`) and
-   `worker/www-redirect/wrangler.jsonc` (alias hosts `www.rakshithponnappa.dev`, `rakshithponnappa.com` and
+6. **Custom domains** are declared in `wrangler.jsonc` (the canonical `rakshithponnappa.com`) and
+   `worker/www-redirect/wrangler.jsonc` (alias hosts `rakshithponnappa.dev`, `www.rakshithponnappa.dev` and
    `www.rakshithponnappa.com`, each a 301 to the canonical origin with path and query kept), so Cloudflare creates
    the DNS records and certificates on deploy. The CI deploy token must include both zones.
-7. Check that it works: `curl https://rakshithponnappa.dev/api/health`. The Worker logs are in Workers → Observability.
+7. Check that it works: `curl https://rakshithponnappa.com/api/health`. The Worker logs are in Workers → Observability.
 
 ## Local development and tests
 

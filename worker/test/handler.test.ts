@@ -7,7 +7,7 @@ import type { Env } from '../src/env';
 import worker from '../src/index';
 import { EmailMessage } from './cloudflare-email.mock';
 
-const ORIGIN = 'https://rakshithponnappa.dev';
+const ORIGIN = 'https://rakshithponnappa.com';
 
 function makeEnv(overrides: Partial<Env> = {}) {
   const assets = vi.fn(async (req: Request) => {
@@ -27,14 +27,14 @@ function makeEnv(overrides: Partial<Env> = {}) {
     EMAIL: { send },
     AI_MODEL: '@cf/test/model',
     CONTACT_TO: 'inbox@example.com',
-    CONTACT_FROM: 'contact@rakshithponnappa.dev',
+    CONTACT_FROM: 'contact@rakshithponnappa.com',
     ...overrides,
   } as unknown as Env;
   return { env, assets, ai, limit, send };
 }
 
 function post(path: string, body: unknown, headers: Record<string, string> = {}) {
-  return new Request(`https://rakshithponnappa.dev${path}`, {
+  return new Request(`https://rakshithponnappa.com${path}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Origin: ORIGIN, 'CF-Connecting-IP': '203.0.113.9', ...headers },
     body: typeof body === 'string' ? body : JSON.stringify(body),
@@ -49,7 +49,7 @@ afterEach(() => vi.unstubAllGlobals());
 describe('routing & headers', () => {
   it('GET /api/health reports model and corpus version', async () => {
     const { env } = makeEnv();
-    const res = await worker.fetch(new Request('https://rakshithponnappa.dev/api/health'), env);
+    const res = await worker.fetch(new Request('https://rakshithponnappa.com/api/health'), env);
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ status: 'ok', model: '@cf/test/model', corpusVersion: 'test-2026-11-18' });
     expect(res.headers.get('Cache-Control')).toBe('no-store');
@@ -61,7 +61,7 @@ describe('routing & headers', () => {
 
   it('passes non-API paths to ASSETS with security headers', async () => {
     const { env, assets } = makeEnv();
-    const res = await worker.fetch(new Request('https://rakshithponnappa.dev/projects/'), env);
+    const res = await worker.fetch(new Request('https://rakshithponnappa.com/projects/'), env);
     expect(assets).toHaveBeenCalledOnce();
     expect(await res.text()).toBe('<h1>static</h1>');
     expect(res.headers.get('X-Content-Type-Options')).toBe('nosniff');
@@ -70,8 +70,8 @@ describe('routing & headers', () => {
 
   it('404s unknown API routes as JSON and 405s wrong methods', async () => {
     const { env } = makeEnv();
-    expect((await worker.fetch(new Request('https://rakshithponnappa.dev/api/nope'), env)).status).toBe(404);
-    const res = await worker.fetch(new Request('https://rakshithponnappa.dev/api/ask'), env);
+    expect((await worker.fetch(new Request('https://rakshithponnappa.com/api/nope'), env)).status).toBe(404);
+    const res = await worker.fetch(new Request('https://rakshithponnappa.com/api/ask'), env);
     expect(res.status).toBe(405);
     expect(res.headers.get('Allow')).toBe('POST');
   });
@@ -218,7 +218,7 @@ describe('POST /api/ask', () => {
         c.enqueue(big);
       },
     });
-    const req = new Request('https://rakshithponnappa.dev/api/ask', {
+    const req = new Request('https://rakshithponnappa.com/api/ask', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Origin: ORIGIN },
       body,
@@ -268,7 +268,7 @@ describe('POST /api/contact', () => {
     expect(limit).toHaveBeenCalledWith({ key: 'contact:203.0.113.9' });
     const msg = send.mock.calls[0][0] as EmailMessage;
     expect(msg).toBeInstanceOf(EmailMessage);
-    expect(msg.from).toBe('contact@rakshithponnappa.dev');
+    expect(msg.from).toBe('contact@rakshithponnappa.com');
     expect(msg.to).toBe('inbox@example.com');
     expect(msg.raw).toContain('Reply-To: "Ada" <ada@example.com>');
   });

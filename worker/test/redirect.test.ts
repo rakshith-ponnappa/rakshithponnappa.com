@@ -3,13 +3,13 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import redirect from '../www-redirect/index';
 
-const ALIASES = ['www.rakshithponnappa.dev', 'rakshithponnappa.com', 'www.rakshithponnappa.com'];
+const ALIASES = ['rakshithponnappa.dev', 'www.rakshithponnappa.dev', 'www.rakshithponnappa.com'];
 
 describe('alias redirect Worker', () => {
-  it.each(ALIASES)('%s → https://rakshithponnappa.dev with path and query kept (301)', (host) => {
+  it.each(ALIASES)('%s → https://rakshithponnappa.com with path and query kept (301)', (host) => {
     const res = redirect.fetch(new Request(`http://${host}/work/state-street-azure-landing-zone-dr/?utm_source=card`));
     expect(res.status).toBe(301);
-    expect(res.headers.get('Location')).toBe('https://rakshithponnappa.dev/work/state-street-azure-landing-zone-dr/?utm_source=card');
+    expect(res.headers.get('Location')).toBe('https://rakshithponnappa.com/work/state-street-azure-landing-zone-dr/?utm_source=card');
   });
 
   it('is routed on every alias host as a custom domain', () => {
