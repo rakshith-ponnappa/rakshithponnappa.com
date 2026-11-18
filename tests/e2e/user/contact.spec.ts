@@ -55,18 +55,22 @@ test.describe('contact form', () => {
     await expect(page.locator('#c-name')).toBeHidden();
   });
 
-  test('falls back to mailto when the API is unavailable', async ({ page, target }) => {
+  test('falls back to mailto when the API is unavailable', async ({ page, target, browserName }) => {
     await captureMailto(page);
     if (target === 'stack')
       await page.route('**/api/contact', (r) => r.fulfill({ status: 503, json: { ok: false, error: 'email not configured', fallback: 'mailto' } }));
     await page.goto('/contact/');
-    const hasNavApi = await page.evaluate(() => 'navigation' in window);
+    // Only Chromium fires the Navigation API `navigate` event for mailto: (Firefox hands it straight to the OS),
+    // so the exact draft is checked there; every browser must show the hand-off panel.
+    const capturesMailto = browserName === 'chromium' && (await page.evaluate(() => 'navigation' in window));
     await page.locator('#c-topic').selectOption('Consulting');
     await fill(page);
     const res = page.waitForResponse('**/api/contact');
     await submit(page);
     expect((await res).status()).toBe(target === 'stack' ? 503 : 404);
-    if (hasNavApi) {
+    await expect(page.locator('[data-handoff]')).toBeVisible();
+    await expect(page.locator('[data-handoff] a[href^="mailto:"]')).toHaveAttribute('href', 'mailto:contact@rakshithponnappa.dev');
+    if (capturesMailto) {
       await expect.poll(() => page.evaluate(() => (window as unknown as { __mailto?: string }).__mailto ?? '')).toMatch(/^mailto:/);
       const mailto = await page.evaluate(() => (window as unknown as { __mailto: string }).__mailto);
       const u = new URL(mailto);
