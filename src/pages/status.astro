@@ -32,8 +32,8 @@ const okShare = s.history.length ? pct(passing / s.history.length) : '–';
   description="A status page computed from build data: retrieval evals, corpus, content, résumé PDF and live edge checks, with per-deploy history."
 >
   <section class="container-x page-head">
-    <p class="eyebrow">Status · computed, not declared</p>
     <h1>System <em class="serif">status.</em></h1>
+    <p class="subhead">Computed, not declared</p>
     <p class="lede">
       Every state on this page comes from the build that produced it or from a live check your browser runs. Nothing here is hard-coded,
       so when something degrades, this page says so.
@@ -443,7 +443,7 @@ const okShare = s.history.length ? pct(passing / s.history.length) : '–';
     gap: 0.6rem;
   }
   .when dt {
-    color: var(--fg-faint);
+    color: var(--fg-muted);
   }
   .when dd {
     color: var(--fg-muted);
@@ -550,6 +550,7 @@ const okShare = s.history.length ? pct(passing / s.history.length) : '–';
     font-size: 0.85rem;
     line-height: 1.5;
     color: var(--fg-muted);
+    max-width: 76ch;
   }
   .check {
     display: block;
@@ -757,7 +758,7 @@ const okShare = s.history.length ? pct(passing / s.history.length) : '–';
   .note {
     font-size: 0.88rem;
     color: var(--fg-muted);
-    max-width: 62ch;
+    max-width: 64ch;
   }
 
   /* How it works */
@@ -772,6 +773,7 @@ const okShare = s.history.length ? pct(passing / s.history.length) : '–';
   .how li {
     padding-left: 1rem;
     position: relative;
+    max-width: 64ch;
   }
   .how li::before {
     content: '';

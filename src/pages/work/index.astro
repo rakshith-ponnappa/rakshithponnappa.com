@@ -12,8 +12,8 @@ const work = (await getCollection('work')).sort((a, b) => a.data.order - b.data.
   description="Client case studies: Azure and AWS landing zones, Kubernetes platforms, GitLab and Harness delivery, DR and AI evaluation work, written as postmortems with real numbers."
 >
   <section class="container-x page-head">
-    <p class="eyebrow">Work · {work.length} case studies</p>
     <h1>Engagements, <em class="serif">written as postmortems.</em></h1>
+    <p class="subhead">{work.length} case studies</p>
     <p class="lede">
       Context, constraints, the decisions that mattered and what actually changed. Client names are real; the numbers come from the work
       itself: banking, retail, telecom, government, construction SaaS and AI evaluation, on Azure, AWS, GCP and on-prem.

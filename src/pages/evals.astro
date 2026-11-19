@@ -20,8 +20,8 @@ const tiles = [
   description="Public, build-time evaluation of the Ask the runbook assistant: retrieval hit@k, MRR and refusal behaviour on a golden question set."
 >
   <section class="container-x page-head">
-    <p class="eyebrow">Evals · run on every deploy</p>
     <h1>The assistant, <em class="serif">measured in public.</em></h1>
+    <p class="subhead">Run on every deploy</p>
     <p class="lede">
       Every build runs a golden set of {r.cases.length} on-topic questions and {r.negs.length} off-topic ones against the exact BM25 index
       the Worker serves. If retrieval regresses, it shows up here first.
@@ -48,8 +48,8 @@ const tiles = [
 
   <section class="section container-x" aria-labelledby="golden">
     <div class="section-head">
-      <p class="eyebrow">Golden set · {r.cases.length - fails}/{r.cases.length} passing</p>
       <h2 id="golden" class="section-title">On-topic questions</h2>
+      <p class="subhead">Golden set · {r.cases.length - fails}/{r.cases.length} passing</p>
       <p class="lede">A case passes when an expected page ranks in the top three <em>and</em> the refusal gate lets the question through.</p>
     </div>
     <div class="table-wrap">
@@ -81,8 +81,8 @@ const tiles = [
 
   <section class="section container-x" aria-labelledby="neg">
     <div class="section-head">
-      <p class="eyebrow">Refusals · {r.negs.filter((n) => n.refused).length}/{r.negs.length} refused</p>
       <h2 id="neg" class="section-title">Off-topic questions</h2>
+      <p class="subhead">Refusals · {r.negs.filter((n) => n.refused).length}/{r.negs.length} refused</p>
       <p class="lede">These must be refused before any model is called. That keeps answers grounded and costs at zero.</p>
     </div>
     <div class="table-wrap">
@@ -140,6 +140,7 @@ const tiles = [
   }
   .lede {
     margin-top: 1.25rem;
+    max-width: min(44rem, 62ch);
   }
   .stamp {
     margin-top: 1.5rem;
@@ -232,7 +233,7 @@ const tiles = [
     margin-top: 1rem;
     display: grid;
     gap: 0.6rem;
-    max-width: 52rem;
+    max-width: min(52rem, 64ch);
     color: var(--fg-muted);
   }
   .notes li {
